@@ -1,16 +1,34 @@
 {% extends "base.html" %}
 
-{% block title %}Create Account - DocumentVault{% endblock %}
+{% block title %}
+Create Account - Doxari
+{% endblock %}
 
 {% block content %}
 
 <div class="form-container">
 
-    <h1>Create Account</h1>
+```
+<div class="form-header">
 
-    <form method="POST">
+    <h1>
+        Create Account
+    </h1>
 
-        <label for="email">Email address</label>
+    <p>
+        Get started with Doxari
+    </p>
+
+</div>
+
+
+<form method="POST">
+
+    <div class="form-group">
+
+        <label for="email">
+            Email address
+        </label>
 
         <input
             type="email"
@@ -20,7 +38,14 @@
             required
         >
 
-        <label for="password">Password</label>
+    </div>
+
+
+    <div class="form-group">
+
+        <label for="password">
+            Password
+        </label>
 
         <input
             type="password"
@@ -30,16 +55,27 @@
             required
         >
 
-        <button type="submit">
-            Create Account
-        </button>
+    </div>
 
-    </form>
 
-    <p>
-        Already have an account?
-        <a href="{{ url_for('login') }}">Login</a>
-    </p>
+    <button
+        type="submit"
+        class="form-button"
+    >
+        Create Account
+    </button>
+
+</form>
+
+
+<p class="form-footer">
+    Already have an account?
+
+    <a href="{{ url_for('login') }}">
+        Login
+    </a>
+</p>
+```
 
 </div>
 

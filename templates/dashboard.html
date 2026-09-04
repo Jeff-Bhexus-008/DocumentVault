@@ -1,7 +1,8 @@
-```html
 {% extends "base.html" %}
 
-{% block title %}Dashboard - DocumentVault{% endblock %}
+{% block title %}
+    Dashboard - Doxari
+{% endblock %}
 
 {% block content %}
 
@@ -10,7 +11,7 @@
     <aside class="sidebar">
 
         <div class="sidebar-logo">
-            DocumentVault
+            Doxari
         </div>
 
         <nav class="sidebar-nav">
@@ -70,7 +71,9 @@
 
                     {% for message in messages %}
 
-                        <p>{{ message }}</p>
+                        <p>
+                            {{ message }}
+                        </p>
 
                     {% endfor %}
 
@@ -124,7 +127,10 @@
         </div>
 
 
-        <div class="documents-section" id="documents">
+        <div
+            class="documents-section"
+            id="documents"
+        >
 
             <div class="section-header">
 
@@ -236,6 +242,7 @@
 
                 </div>
 
+
             {% else %}
 
                 <div class="empty-documents">
@@ -263,4 +270,4 @@
 </div>
 
 {% endblock %}
-```
+

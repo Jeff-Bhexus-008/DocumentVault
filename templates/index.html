@@ -1,25 +1,64 @@
 {% extends "base.html" %}
 
 {% block title %}
-DocumentVault - Secure Document Storage
+Doxari - Secure Document Storage
 {% endblock %}
-
 
 {% block content %}
 
-<section class="hero">
+<div class="splash-screen" id="splashScreen">
 
-    <h1>
-        Your Documents.
-        <br>
-        Securely Stored.
-    </h1>
+```
+<img
+    src="{{ url_for('static', filename='logo.png') }}"
+    alt="Doxari"
+    class="splash-logo"
+>
+```
 
-    <p>
-        DocumentVault helps you securely store and manage
-        your important documents from anywhere in the world.
-    </p>
+</div>
+
+<section class="hero" id="heroContent">
+
+```
+<h1>
+    Your Documents.
+    <br>
+    Securely Stored.
+</h1>
+
+<p>
+    Doxari helps you securely store and manage
+    your important documents from anywhere in the world.
+</p>
+```
 
 </section>
+
+<script>
+
+    window.addEventListener("load", function () {
+
+        const splash = document.getElementById("splashScreen");
+        const hero = document.getElementById("heroContent");
+
+        hero.style.display = "none";
+
+        setTimeout(function () {
+
+            splash.classList.add("fade-out");
+
+            setTimeout(function () {
+
+                splash.style.display = "none";
+                hero.style.display = "block";
+
+            }, 1000);
+
+        }, 5000);
+
+    });
+
+</script>
 
 {% endblock %}
