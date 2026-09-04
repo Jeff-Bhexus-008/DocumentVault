@@ -1,0 +1,266 @@
+```html
+{% extends "base.html" %}
+
+{% block title %}Dashboard - DocumentVault{% endblock %}
+
+{% block content %}
+
+<div class="dashboard">
+
+    <aside class="sidebar">
+
+        <div class="sidebar-logo">
+            DocumentVault
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <a
+                href="{{ url_for('dashboard') }}"
+                class="active"
+            >
+                Dashboard
+            </a>
+
+            <a href="#documents">
+                My Documents
+            </a>
+
+            <a href="#">
+                Settings
+            </a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+
+            <a href="{{ url_for('logout') }}">
+                Logout
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <section class="dashboard-main">
+
+        <header class="dashboard-header">
+
+            <div>
+
+                <h1>
+                    Welcome back! 👋
+                </h1>
+
+                <p>
+                    {{ user_email }}
+                </p>
+
+            </div>
+
+        </header>
+
+
+        {% with messages = get_flashed_messages() %}
+
+            {% if messages %}
+
+                <div class="flash-message">
+
+                    {% for message in messages %}
+
+                        <p>{{ message }}</p>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+        {% endwith %}
+
+
+        <div class="stats">
+
+            <div class="stat-card">
+
+                <h3>
+                    Total Documents
+                </h3>
+
+                <p>
+                    {{ documents|length }}
+                </p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <h3>
+                    Storage
+                </h3>
+
+                <p>
+                    Private
+                </p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <h3>
+                    Account
+                </h3>
+
+                <p>
+                    Active
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="documents-section" id="documents">
+
+            <div class="section-header">
+
+                <div>
+
+                    <h2>
+                        My Documents
+                    </h2>
+
+                    <p>
+                        Your documents are stored securely.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="upload-box">
+
+                <form
+                    action="{{ url_for('upload') }}"
+                    method="POST"
+                    enctype="multipart/form-data"
+                >
+
+                    <input
+                        type="file"
+                        name="file"
+                        required
+                    >
+
+                    <button
+                        type="submit"
+                        class="upload-button"
+                    >
+                        + Upload Document
+                    </button>
+
+                </form>
+
+                <small>
+                    Maximum size: 10 MB.
+                    PDF, DOC, DOCX, TXT, PNG, JPG and JPEG.
+                </small>
+
+            </div>
+
+
+            {% if documents %}
+
+                <div class="document-list">
+
+                    {% for document in documents %}
+
+                        <div class="document-card">
+
+                            <div>
+
+                                <h3>
+                                    📄 {{ document.filename }}
+                                </h3>
+
+                                <small>
+                                    {{ document.created_at }}
+                                </small>
+
+                            </div>
+
+
+                            <div class="document-actions">
+
+                                <a
+                                    href="{{ url_for(
+                                        'download',
+                                        document_id=document.id
+                                    ) }}"
+                                    class="action-button"
+                                >
+                                    Download
+                                </a>
+
+
+                                <form
+                                    action="{{ url_for(
+                                        'delete',
+                                        document_id=document.id
+                                    ) }}"
+                                    method="POST"
+                                >
+
+                                    <button
+                                        type="submit"
+                                        class="delete-button"
+                                        onclick="return confirm(
+                                            'Delete this document?'
+                                        )"
+                                    >
+                                        Delete
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="empty-documents">
+
+                    <div class="empty-icon">
+                        📁
+                    </div>
+
+                    <h3>
+                        No documents yet
+                    </h3>
+
+                    <p>
+                        Upload your first document to get started.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}
+```
