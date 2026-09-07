@@ -92,6 +92,33 @@ def home():
 
 
 # =========================
+# SITEMAP
+# =========================
+
+@app.route("/sitemap.xml")
+def sitemap():
+    return Response(
+        """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+    <url>
+        <loc>https://documentvault-o97a.onrender.com/</loc>
+    </url>
+
+    <url>
+        <loc>https://documentvault-o97a.onrender.com/login</loc>
+    </url>
+
+    <url>
+        <loc>https://documentvault-o97a.onrender.com/register</loc>
+    </url>
+
+</urlset>""",
+        mimetype="application/xml"
+    )
+
+
+# =========================
 # REGISTER
 # =========================
 
@@ -105,14 +132,12 @@ def register():
         confirm_password = request.form.get("confirm_password", "")
 
         if not email or not password or not confirm_password:
-
             return render_template(
                 "register.html",
                 error="All fields are required."
             )
 
         if password != confirm_password:
-
             return render_template(
                 "register.html",
                 error="Passwords do not match."
@@ -136,7 +161,6 @@ def register():
             if response.status_code not in (200, 201):
 
                 try:
-
                     error_data = response.json()
 
                     error_message = error_data.get(
@@ -148,7 +172,6 @@ def register():
                     )
 
                 except Exception:
-
                     error_message = "Registration failed."
 
                 if (
@@ -156,7 +179,6 @@ def register():
                     or "already exists" in error_message.lower()
                     or "user already registered" in error_message.lower()
                 ):
-
                     return render_template(
                         "register.html",
                         error=(
@@ -173,7 +195,6 @@ def register():
             return redirect(url_for("login"))
 
         except Exception as error:
-
             return render_template(
                 "register.html",
                 error=f"Registration error: {error}"
@@ -195,7 +216,6 @@ def login():
         password = request.form.get("password", "")
 
         if not email or not password:
-
             return render_template(
                 "login.html",
                 error="Email and password are required."
@@ -219,7 +239,6 @@ def login():
             if response.status_code != 200:
 
                 try:
-
                     error_data = response.json()
 
                     error_message = error_data.get(
@@ -231,7 +250,6 @@ def login():
                     )
 
                 except Exception:
-
                     error_message = "Invalid email or password."
 
                 return render_template(
@@ -249,7 +267,6 @@ def login():
             return redirect(url_for("dashboard"))
 
         except Exception as error:
-
             return render_template(
                 "login.html",
                 error=f"Login error: {error}"
@@ -288,30 +305,25 @@ def dashboard():
 
         # Search
         if search:
-
             params["filename"] = f"ilike.*{search}*"
 
         # Favorites
         if favorites == "true":
-
             params["favorite"] = "eq.true"
 
         # Folder
         if folder:
-
             params["folder"] = f"eq.{folder}"
 
         # File type
         if file_type:
 
             if search:
-
                 params["filename"] = (
                     f"ilike.*{search}*.{file_type}"
                 )
 
             else:
-
                 params["filename"] = (
                     f"ilike.*.{file_type}"
                 )
@@ -336,7 +348,6 @@ def dashboard():
             documents = []
 
         else:
-
             documents = response.json()
 
     except Exception as error:
@@ -508,13 +519,11 @@ def download(document_id):
         )
 
         if response.status_code != 200:
-
             return "Unable to find document."
 
         documents = response.json()
 
         if not documents:
-
             return "Document not found."
 
         document = documents[0]
@@ -547,12 +556,9 @@ def download(document_id):
                 f"{sign_response.text}"
             )
 
-        signed_url = sign_response.json()[
-            "signedURL"
-        ]
+        signed_url = sign_response.json()["signedURL"]
 
         if signed_url.startswith("/"):
-
             signed_url = (
                 SUPABASE_URL
                 + "/storage/v1"
@@ -565,7 +571,6 @@ def download(document_id):
         )
 
         if file_response.status_code != 200:
-
             return "Unable to download file."
 
         return Response(
@@ -614,13 +619,11 @@ def view_document(document_id):
         )
 
         if response.status_code != 200:
-
             return "Unable to find document."
 
         documents = response.json()
 
         if not documents:
-
             return "Document not found."
 
         document = documents[0]
@@ -652,12 +655,9 @@ def view_document(document_id):
                 f"{sign_response.text}"
             )
 
-        signed_url = sign_response.json()[
-            "signedURL"
-        ]
+        signed_url = sign_response.json()["signedURL"]
 
         if signed_url.startswith("/"):
-
             signed_url = (
                 SUPABASE_URL
                 + "/storage/v1"
@@ -670,7 +670,6 @@ def view_document(document_id):
         )
 
         if file_response.status_code != 200:
-
             return "Unable to open file."
 
         content_type = file_response.headers.get(
@@ -720,13 +719,11 @@ def favorite(document_id):
         )
 
         if response.status_code != 200:
-
             return "Unable to find document."
 
         documents = response.json()
 
         if not documents:
-
             return "Document not found."
 
         current_status = documents[0]["favorite"]
@@ -801,12 +798,9 @@ def delete(document_id):
         documents = response.json()
 
         if not documents:
-
             return "Document not found."
 
-        storage_path = documents[0][
-            "storage_path"
-        ]
+        storage_path = documents[0]["storage_path"]
 
         storage_url = (
             f"{SUPABASE_URL}/storage/v1/object/"
