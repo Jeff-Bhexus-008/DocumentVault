@@ -6,6 +6,7 @@ import requests
 
 from flask import (
     Flask,
+    Response,
     render_template,
     request,
     redirect,
@@ -17,6 +18,10 @@ from flask import (
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 
+
+# =========================
+# LOAD ENVIRONMENT
+# =========================
 
 load_dotenv()
 
@@ -97,9 +102,21 @@ def register():
 
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
 
-        if not email or not password:
-            return "Email and password are required."
+        if not email or not password or not confirm_password:
+
+            return render_template(
+                "register.html",
+                error="All fields are required."
+            )
+
+        if password != confirm_password:
+
+            return render_template(
+                "register.html",
+                error="Passwords do not match."
+            )
 
         try:
 
@@ -117,12 +134,50 @@ def register():
             )
 
             if response.status_code not in (200, 201):
-                return f"Registration error: {response.text}"
+
+                try:
+
+                    error_data = response.json()
+
+                    error_message = error_data.get(
+                        "msg",
+                        error_data.get(
+                            "message",
+                            "Registration failed."
+                        )
+                    )
+
+                except Exception:
+
+                    error_message = "Registration failed."
+
+                if (
+                    "already registered" in error_message.lower()
+                    or "already exists" in error_message.lower()
+                    or "user already registered" in error_message.lower()
+                ):
+
+                    return render_template(
+                        "register.html",
+                        error=(
+                            "This email is already registered. "
+                            "Please log in instead."
+                        )
+                    )
+
+                return render_template(
+                    "register.html",
+                    error=error_message
+                )
 
             return redirect(url_for("login"))
 
         except Exception as error:
-            return f"Registration error: {error}"
+
+            return render_template(
+                "register.html",
+                error=f"Registration error: {error}"
+            )
 
     return render_template("register.html")
 
@@ -138,6 +193,13 @@ def login():
 
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
+
+        if not email or not password:
+
+            return render_template(
+                "login.html",
+                error="Email and password are required."
+            )
 
         try:
 
@@ -155,7 +217,27 @@ def login():
             )
 
             if response.status_code != 200:
-                return f"Login error: {response.text}"
+
+                try:
+
+                    error_data = response.json()
+
+                    error_message = error_data.get(
+                        "msg",
+                        error_data.get(
+                            "message",
+                            "Login failed."
+                        )
+                    )
+
+                except Exception:
+
+                    error_message = "Invalid email or password."
+
+                return render_template(
+                    "login.html",
+                    error=error_message
+                )
 
             data = response.json()
 
@@ -167,7 +249,11 @@ def login():
             return redirect(url_for("dashboard"))
 
         except Exception as error:
-            return f"Login error: {error}"
+
+            return render_template(
+                "login.html",
+                error=f"Login error: {error}"
+            )
 
     return render_template("login.html")
 
@@ -184,7 +270,51 @@ def dashboard():
 
     user_id = session["user_id"]
 
+    search = request.args.get("search", "").strip()
+    file_type = request.args.get("file_type", "").strip().lower()
+    favorites = request.args.get("favorites", "").strip().lower()
+    folder = request.args.get("folder", "").strip()
+
     try:
+
+        params = {
+            "user_id": f"eq.{user_id}",
+            "select": (
+                "id,filename,storage_path,"
+                "created_at,favorite,folder"
+            ),
+            "order": "created_at.desc"
+        }
+
+        # Search
+        if search:
+
+            params["filename"] = f"ilike.*{search}*"
+
+        # Favorites
+        if favorites == "true":
+
+            params["favorite"] = "eq.true"
+
+        # Folder
+        if folder:
+
+            params["folder"] = f"eq.{folder}"
+
+        # File type
+        if file_type:
+
+            if search:
+
+                params["filename"] = (
+                    f"ilike.*{search}*.{file_type}"
+                )
+
+            else:
+
+                params["filename"] = (
+                    f"ilike.*.{file_type}"
+                )
 
         response = requests.get(
             f"{SUPABASE_URL}/rest/v1/documents",
@@ -192,26 +322,40 @@ def dashboard():
                 **server_headers(),
                 "Content-Type": "application/json"
             },
-            params={
-                "user_id": f"eq.{user_id}",
-                "select": "id,filename,storage_path,created_at",
-                "order": "created_at.desc"
-            },
+            params=params,
             timeout=30
         )
 
         if response.status_code != 200:
+
+            print(
+                "Dashboard error:",
+                response.text
+            )
+
             documents = []
+
         else:
+
             documents = response.json()
 
-    except Exception:
+    except Exception as error:
+
+        print(
+            "Dashboard error:",
+            error
+        )
+
         documents = []
 
     return render_template(
         "dashboard.html",
         user_email=session.get("user_email"),
-        documents=documents
+        documents=documents,
+        search=search,
+        file_type=file_type,
+        favorites=favorites,
+        folder=folder
     )
 
 
@@ -233,6 +377,11 @@ def upload():
 
     file = request.files["file"]
 
+    folder = request.form.get(
+        "folder",
+        "General"
+    ).strip()
+
     if file.filename == "":
 
         flash("Please select a file.")
@@ -248,7 +397,9 @@ def upload():
 
         return redirect(url_for("dashboard"))
 
-    original_filename = secure_filename(file.filename)
+    original_filename = secure_filename(
+        file.filename
+    )
 
     user_id = session["user_id"]
 
@@ -256,7 +407,9 @@ def upload():
         f"{uuid.uuid4().hex}_{original_filename}"
     )
 
-    storage_path = f"{user_id}/{unique_filename}"
+    storage_path = (
+        f"{user_id}/{unique_filename}"
+    )
 
     try:
 
@@ -264,7 +417,8 @@ def upload():
 
         upload_url = (
             f"{SUPABASE_URL}/storage/v1/object/"
-            f"{BUCKET_NAME}/{quote(storage_path, safe='/')}"
+            f"{BUCKET_NAME}/"
+            f"{quote(storage_path, safe='/')}"
         )
 
         upload_response = requests.post(
@@ -298,14 +452,13 @@ def upload():
             json={
                 "user_id": user_id,
                 "filename": original_filename,
-                "storage_path": storage_path
+                "storage_path": storage_path,
+                "folder": folder
             },
             timeout=30
         )
 
         if database_response.status_code not in (200, 201):
-
-            # Remove uploaded file if database insertion fails.
 
             requests.delete(
                 upload_url,
@@ -318,9 +471,12 @@ def upload():
                 f"{database_response.text}"
             )
 
-        flash("Document uploaded successfully.")
+        flash(
+            "Document uploaded successfully."
+        )
 
     except Exception as error:
+
         return f"Upload error: {error}"
 
     return redirect(url_for("dashboard"))
@@ -340,7 +496,6 @@ def download(document_id):
 
     try:
 
-        # Find the document belonging to this user
         response = requests.get(
             f"{SUPABASE_URL}/rest/v1/documents",
             headers=server_headers(),
@@ -353,11 +508,13 @@ def download(document_id):
         )
 
         if response.status_code != 200:
+
             return "Unable to find document."
 
         documents = response.json()
 
         if not documents:
+
             return "Document not found."
 
         document = documents[0]
@@ -365,10 +522,10 @@ def download(document_id):
         filename = document["filename"]
         storage_path = document["storage_path"]
 
-        # Create a signed URL
         sign_url = (
             f"{SUPABASE_URL}/storage/v1/object/sign/"
-            f"{BUCKET_NAME}/{quote(storage_path, safe='/')}"
+            f"{BUCKET_NAME}/"
+            f"{quote(storage_path, safe='/')}"
         )
 
         sign_response = requests.post(
@@ -384,28 +541,32 @@ def download(document_id):
         )
 
         if sign_response.status_code != 200:
-            return f"Download error: {sign_response.text}"
 
-        signed_url = sign_response.json()["signedURL"]
+            return (
+                "Download error: "
+                f"{sign_response.text}"
+            )
+
+        signed_url = sign_response.json()[
+            "signedURL"
+        ]
 
         if signed_url.startswith("/"):
+
             signed_url = (
                 SUPABASE_URL
                 + "/storage/v1"
                 + signed_url
             )
 
-        # Download the actual file from Supabase
         file_response = requests.get(
             signed_url,
             timeout=60
         )
 
         if file_response.status_code != 200:
-            return "Unable to download file."
 
-        # Send file to browser as an attachment
-        from flask import Response
+            return "Unable to download file."
 
         return Response(
             file_response.content,
@@ -423,7 +584,17 @@ def download(document_id):
         )
 
     except Exception as error:
+
         return f"Download error: {error}"
+
+
+# =========================
+# VIEW DOCUMENT
+# =========================
+
+@app.route("/view/<document_id>")
+def view_document(document_id):
+
     if "user_id" not in session:
         return redirect(url_for("login"))
 
@@ -437,24 +608,29 @@ def download(document_id):
             params={
                 "id": f"eq.{document_id}",
                 "user_id": f"eq.{user_id}",
-                "select": "storage_path"
+                "select": "filename,storage_path"
             },
             timeout=30
         )
 
         if response.status_code != 200:
+
             return "Unable to find document."
 
         documents = response.json()
 
         if not documents:
+
             return "Document not found."
 
-        storage_path = documents[0]["storage_path"]
+        document = documents[0]
+
+        storage_path = document["storage_path"]
 
         sign_url = (
             f"{SUPABASE_URL}/storage/v1/object/sign/"
-            f"{BUCKET_NAME}/{quote(storage_path, safe='/')}"
+            f"{BUCKET_NAME}/"
+            f"{quote(storage_path, safe='/')}"
         )
 
         sign_response = requests.post(
@@ -470,28 +646,131 @@ def download(document_id):
         )
 
         if sign_response.status_code != 200:
-            return f"Download error: {sign_response.text}"
 
-        signed_url = sign_response.json()["signedURL"]
+            return (
+                "View error: "
+                f"{sign_response.text}"
+            )
+
+        signed_url = sign_response.json()[
+            "signedURL"
+        ]
 
         if signed_url.startswith("/"):
+
             signed_url = (
                 SUPABASE_URL
                 + "/storage/v1"
                 + signed_url
             )
 
-        return redirect(signed_url)
+        file_response = requests.get(
+            signed_url,
+            timeout=60
+        )
+
+        if file_response.status_code != 200:
+
+            return "Unable to open file."
+
+        content_type = file_response.headers.get(
+            "Content-Type",
+            "application/octet-stream"
+        )
+
+        return Response(
+            file_response.content,
+            headers={
+                "Content-Type": content_type,
+                "Content-Disposition": "inline"
+            }
+        )
 
     except Exception as error:
-        return f"Download error: {error}"
+
+        return f"View error: {error}"
+
+
+# =========================
+# TOGGLE FAVORITE
+# =========================
+
+@app.route(
+    "/favorite/<document_id>",
+    methods=["POST"]
+)
+def favorite(document_id):
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
+    try:
+
+        response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/documents",
+            headers=server_headers(),
+            params={
+                "id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+                "select": "favorite"
+            },
+            timeout=30
+        )
+
+        if response.status_code != 200:
+
+            return "Unable to find document."
+
+        documents = response.json()
+
+        if not documents:
+
+            return "Document not found."
+
+        current_status = documents[0]["favorite"]
+
+        update_response = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/documents",
+            headers={
+                **server_headers(),
+                "Content-Type": "application/json"
+            },
+            params={
+                "id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}"
+            },
+            json={
+                "favorite": not current_status
+            },
+            timeout=30
+        )
+
+        if update_response.status_code not in (200, 204):
+
+            return (
+                "Favorite update error: "
+                f"{update_response.text}"
+            )
+
+        flash("Favorite updated.")
+
+    except Exception as error:
+
+        return f"Favorite error: {error}"
+
+    return redirect(url_for("dashboard"))
 
 
 # =========================
 # DELETE DOCUMENT
 # =========================
 
-@app.route("/delete/<document_id>", methods=["POST"])
+@app.route(
+    "/delete/<document_id>",
+    methods=["POST"]
+)
 def delete(document_id):
 
     if "user_id" not in session:
@@ -512,16 +791,27 @@ def delete(document_id):
             timeout=30
         )
 
+        if response.status_code != 200:
+
+            return (
+                "Unable to find document: "
+                f"{response.text}"
+            )
+
         documents = response.json()
 
         if not documents:
+
             return "Document not found."
 
-        storage_path = documents[0]["storage_path"]
+        storage_path = documents[0][
+            "storage_path"
+        ]
 
         storage_url = (
             f"{SUPABASE_URL}/storage/v1/object/"
-            f"{BUCKET_NAME}/{quote(storage_path, safe='/')}"
+            f"{BUCKET_NAME}/"
+            f"{quote(storage_path, safe='/')}"
         )
 
         storage_response = requests.delete(
@@ -557,6 +847,7 @@ def delete(document_id):
         flash("Document deleted.")
 
     except Exception as error:
+
         return f"Delete error: {error}"
 
     return redirect(url_for("dashboard"))
@@ -575,14 +866,15 @@ def logout():
 
 
 # =========================
-# RUN
+# RUN APPLICATION
 # =========================
 
 if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000)),
+        port=int(
+            os.environ.get("PORT", 5000)
+        ),
         debug=True
     )
-

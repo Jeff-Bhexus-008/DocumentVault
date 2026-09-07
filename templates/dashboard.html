@@ -1,12 +1,16 @@
 {% extends "base.html" %}
 
 {% block title %}
-    Dashboard - Doxari
+Dashboard - Doxari
 {% endblock %}
 
 {% block content %}
 
 <div class="dashboard">
+
+    <!-- =========================
+         SIDEBAR
+         ========================= -->
 
     <aside class="sidebar">
 
@@ -18,20 +22,63 @@
 
             <a
                 href="{{ url_for('dashboard') }}"
-                class="active"
+                class="{% if not folder %}active{% endif %}"
             >
                 Dashboard
             </a>
 
             <a href="#documents">
-                My Documents
+                📄 My Documents
+            </a>
+
+            <a
+                href="{{ url_for('dashboard') }}"
+                class="{% if not folder %}active{% endif %}"
+            >
+                📁 All Documents
+            </a>
+
+            <a
+                href="{{ url_for('dashboard', folder='School') }}"
+                class="{% if folder == 'School' %}active{% endif %}"
+            >
+                🎓 School
+            </a>
+
+            <a
+                href="{{ url_for('dashboard', folder='Work') }}"
+                class="{% if folder == 'Work' %}active{% endif %}"
+            >
+                💼 Work
+            </a>
+
+            <a
+                href="{{ url_for('dashboard', folder='Personal') }}"
+                class="{% if folder == 'Personal' %}active{% endif %}"
+            >
+                👤 Personal
+            </a>
+
+            <a
+                href="{{ url_for('dashboard', folder='Certificates') }}"
+                class="{% if folder == 'Certificates' %}active{% endif %}"
+            >
+                📜 Certificates
+            </a>
+
+            <a
+                href="{{ url_for('dashboard', folder='Important') }}"
+                class="{% if folder == 'Important' %}active{% endif %}"
+            >
+                ⭐ Important
             </a>
 
             <a href="#">
-                Settings
+                ⚙️ Settings
             </a>
 
         </nav>
+
 
         <div class="sidebar-bottom">
 
@@ -44,7 +91,14 @@
     </aside>
 
 
+    <!-- =========================
+         MAIN DASHBOARD
+         ========================= -->
+
     <section class="dashboard-main">
+
+
+        <!-- HEADER -->
 
         <header class="dashboard-header">
 
@@ -62,6 +116,8 @@
 
         </header>
 
+
+        <!-- FLASH MESSAGES -->
 
         {% with messages = get_flashed_messages() %}
 
@@ -83,6 +139,10 @@
 
         {% endwith %}
 
+
+        <!-- =========================
+             STATISTICS
+             ========================= -->
 
         <div class="stats">
 
@@ -127,10 +187,17 @@
         </div>
 
 
+        <!-- =========================
+             DOCUMENTS SECTION
+             ========================= -->
+
         <div
             class="documents-section"
             id="documents"
         >
+
+
+            <!-- SECTION HEADER -->
 
             <div class="section-header">
 
@@ -149,6 +216,124 @@
             </div>
 
 
+            <!-- =========================
+                 SEARCH & FILTERS
+                 ========================= -->
+
+            <div class="document-search">
+
+
+                <div class="document-filter">
+
+                    <a
+                        href="{{ url_for('dashboard') }}"
+                        class="{% if not file_type and not favorites and not folder %}active{% endif %}"
+                    >
+                        All
+                    </a>
+
+
+                    <a
+                        href="{{ url_for('dashboard', favorites='true') }}"
+                        class="{% if favorites == 'true' %}active{% endif %}"
+                    >
+                        ⭐ Favorites
+                    </a>
+
+
+                    <a
+                        href="{{ url_for('dashboard', file_type='pdf') }}"
+                        class="{% if file_type == 'pdf' %}active{% endif %}"
+                    >
+                        PDF
+                    </a>
+
+
+                    <a
+                        href="{{ url_for('dashboard', file_type='doc') }}"
+                        class="{% if file_type == 'doc' %}active{% endif %}"
+                    >
+                        DOC
+                    </a>
+
+
+                    <a
+                        href="{{ url_for('dashboard', file_type='docx') }}"
+                        class="{% if file_type == 'docx' %}active{% endif %}"
+                    >
+                        DOCX
+                    </a>
+
+
+                    <a
+                        href="{{ url_for('dashboard', file_type='txt') }}"
+                        class="{% if file_type == 'txt' %}active{% endif %}"
+                    >
+                        TXT
+                    </a>
+
+
+                    <a
+                        href="{{ url_for('dashboard', file_type='png') }}"
+                        class="{% if file_type == 'png' %}active{% endif %}"
+                    >
+                        PNG
+                    </a>
+
+
+                    <a
+                        href="{{ url_for('dashboard', file_type='jpg') }}"
+                        class="{% if file_type == 'jpg' %}active{% endif %}"
+                    >
+                        JPG
+                    </a>
+
+                </div>
+
+
+                <!-- SEARCH -->
+
+                <form
+                    action="{{ url_for('dashboard') }}"
+                    method="GET"
+                >
+
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ search }}"
+                        placeholder="🔍 Search your documents..."
+                    >
+
+
+                    <button
+                        type="submit"
+                        class="search-button"
+                    >
+                        Search
+                    </button>
+
+
+                    {% if search %}
+
+                        <a
+                            href="{{ url_for('dashboard') }}"
+                            class="clear-search"
+                        >
+                            Clear
+                        </a>
+
+                    {% endif %}
+
+                </form>
+
+            </div>
+
+
+            <!-- =========================
+                 UPLOAD
+                 ========================= -->
+
             <div class="upload-box">
 
                 <form
@@ -157,11 +342,45 @@
                     enctype="multipart/form-data"
                 >
 
+
+                    <select
+                        name="folder"
+                        class="folder-select"
+                    >
+
+                        <option value="General">
+                            📁 General
+                        </option>
+
+                        <option value="School">
+                            🎓 School
+                        </option>
+
+                        <option value="Work">
+                            💼 Work
+                        </option>
+
+                        <option value="Personal">
+                            👤 Personal
+                        </option>
+
+                        <option value="Certificates">
+                            📜 Certificates
+                        </option>
+
+                        <option value="Important">
+                            ⭐ Important
+                        </option>
+
+                    </select>
+
+
                     <input
                         type="file"
                         name="file"
                         required
                     >
+
 
                     <button
                         type="submit"
@@ -172,6 +391,7 @@
 
                 </form>
 
+
                 <small>
                     Maximum size: 10 MB.
                     PDF, DOC, DOCX, TXT, PNG, JPG and JPEG.
@@ -180,19 +400,33 @@
             </div>
 
 
+            <!-- =========================
+                 DOCUMENT LIST
+                 ========================= -->
+
             {% if documents %}
 
                 <div class="document-list">
 
+
                     {% for document in documents %}
 
                         <div class="document-card">
+
+
+                            <!-- DOCUMENT INFORMATION -->
 
                             <div>
 
                                 <h3>
                                     📄 {{ document.filename }}
                                 </h3>
+
+
+                                <small>
+                                    📁 {{ document.folder or "General" }}
+                                </small>
+
 
                                 <small>
                                     {{ document.created_at }}
@@ -201,33 +435,73 @@
                             </div>
 
 
+                            <!-- =========================
+                                 DOCUMENT ACTIONS
+                                 ========================= -->
+
                             <div class="document-actions">
 
+
+                                <!-- FAVORITE -->
+
+                                <form
+                                    action="{{ url_for('favorite', document_id=document.id) }}"
+                                    method="POST"
+                                >
+
+                                    <button
+                                        type="submit"
+                                        class="favorite-button"
+                                        title="Favorite"
+                                    >
+
+                                        {% if document.favorite %}
+
+                                            ⭐
+
+                                        {% else %}
+
+                                            ☆
+
+                                        {% endif %}
+
+                                    </button>
+
+                                </form>
+
+
+                                <!-- VIEW -->
+
                                 <a
-                                    href="{{ url_for(
-                                        'download',
-                                        document_id=document.id
-                                    ) }}"
+                                    href="{{ url_for('view_document', document_id=document.id) }}"
+                                    class="action-button"
+                                    target="_blank"
+                                >
+                                    👁️ View
+                                </a>
+
+
+                                <!-- DOWNLOAD -->
+
+                                <a
+                                    href="{{ url_for('download', document_id=document.id) }}"
                                     class="action-button"
                                 >
                                     Download
                                 </a>
 
 
+                                <!-- DELETE -->
+
                                 <form
-                                    action="{{ url_for(
-                                        'delete',
-                                        document_id=document.id
-                                    ) }}"
+                                    action="{{ url_for('delete', document_id=document.id) }}"
                                     method="POST"
                                 >
 
                                     <button
                                         type="submit"
                                         class="delete-button"
-                                        onclick="return confirm(
-                                            'Delete this document?'
-                                        )"
+                                        onclick="return confirm('Delete this document?')"
                                     >
                                         Delete
                                     </button>
@@ -242,6 +516,10 @@
 
                 </div>
 
+
+            <!-- =========================
+                 EMPTY STATE
+                 ========================= -->
 
             {% else %}
 
@@ -270,4 +548,3 @@
 </div>
 
 {% endblock %}
-
