@@ -1,0 +1,21 @@
+{% from "partials/macros.html" import icon with context %}
+<header class="public-nav">
+  <a class="brand" href="{{ url_for('main.home') }}" style="padding:0">
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="">
+    <span class="brand-text">
+      <span class="brand-name">Doxari</span>
+      <span class="brand-tag">Document vault</span>
+    </span>
+  </a>
+  <div class="nav-actions">
+    <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
+      <svg class="icon" aria-hidden="true"><use data-theme-icon href="/static/img/icons.svg#i-{{ 'sun' if theme == 'dark' else 'moon' }}"></use></svg>
+    </button>
+    {% if current_user %}
+      <a class="btn btn-primary btn-sm" href="{{ url_for('documents.dashboard') }}">Open dashboard</a>
+    {% else %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('auth.login') }}">Sign in</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('auth.register') }}">Get started</a>
+    {% endif %}
+  </div>
+</header>

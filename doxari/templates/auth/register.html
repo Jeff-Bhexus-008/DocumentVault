@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import icon with context %}
+{% block title %}Create your account — Doxari{% endblock %}
+{% block body %}
+<div class="public-shell">
+  {% include "partials/public_nav.html" %}
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" style="width:38px;height:38px">
+      </div>
+      <div class="auth-head">
+        <h1>Create your Doxari</h1>
+        <p>Your digital documents, beautifully organized.</p>
+      </div>
+
+      {% if error %}<div class="form-error" role="alert">{{ icon('alert', 'icon-sm') }} <span>{{ error }}</span></div>{% endif %}
+      {% if notice %}<div class="form-notice" role="status">{{ icon('check', 'icon-sm') }} <span>{{ notice }}</span></div>{% endif %}
+
+      <form class="auth-form" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="full_name">Your name <span class="muted small">(optional)</span></label>
+          <input class="input" type="text" id="full_name" name="full_name" value="{{ form.full_name }}" autocomplete="name" placeholder="Akoji Onjefu" maxlength="80">
+        </div>
+        <div class="field">
+          <label for="email">Email address</label>
+          <input class="input" type="email" id="email" name="email" value="{{ form.email }}" required autocomplete="email" placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input class="input" type="password" id="password" name="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+          <span class="hint">Use at least 8 characters. A passphrase is easier to remember.</span>
+        </div>
+        <div class="field">
+          <label for="confirm_password">Confirm password</label>
+          <input class="input" type="password" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password" placeholder="Type it again">
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Create account</button>
+      </form>
+
+      <p class="auth-aside">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

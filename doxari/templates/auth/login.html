@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import icon with context %}
+{% block title %}Sign in — Doxari{% endblock %}
+{% block body %}
+<div class="public-shell">
+  {% include "partials/public_nav.html" %}
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" style="width:38px;height:38px">
+      </div>
+      <div class="auth-head">
+        <h1>Welcome back</h1>
+        <p>Sign in to open your document vault.</p>
+      </div>
+
+      {% if error %}<div class="form-error" role="alert">{{ icon('alert', 'icon-sm') }} <span>{{ error }}</span></div>{% endif %}
+
+      <form class="auth-form" method="POST" action="{{ url_for('auth.login', next=next_url) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="email">Email address</label>
+          <input class="input" type="email" id="email" name="email" value="{{ email }}" required autocomplete="email" placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input class="input" type="password" id="password" name="password" required autocomplete="current-password" placeholder="Your password">
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit">Sign in</button>
+      </form>
+
+      <div class="auth-foot">
+        <a href="{{ url_for('auth.forgot_password') }}">Forgot your password?</a>
+      </div>
+      <p class="auth-aside">New to Doxari? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

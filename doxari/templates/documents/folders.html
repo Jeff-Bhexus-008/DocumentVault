@@ -1,0 +1,88 @@
+{% extends "layouts/app.html" %}
+{% from "partials/macros.html" import icon, empty_state with context %}
+{% from "documents/_folder_node.html" import folder_node with context %}
+
+{% block title %}Folders — Doxari{% endblock %}
+
+{% block page %}
+<header class="page-head">
+  <div>
+    <h1>My folders</h1>
+    <p class="page-sub">
+      {% if supported %}
+        {{ folders|length }} top-level folder{{ '' if folders|length == 1 else 's' }} · organise documents into nested folders
+      {% else %}
+        Folders use the category system until the database upgrade is applied
+      {% endif %}
+    </p>
+  </div>
+  <div class="page-actions">
+    <button class="btn" type="button" data-modal-open="folderModal">{{ icon('folder-plus', 'icon-sm') }} New folder</button>
+    <button class="btn btn-primary" type="button" data-modal-open="uploadModal">{{ icon('upload', 'icon-sm') }} Upload</button>
+  </div>
+</header>
+
+{% if not supported %}
+<div class="setup-note">
+  {{ icon('info') }}
+  <div>
+    <strong>Nested folders need the database upgrade.</strong>
+    Your existing categories still work and every document is exactly where you left it.
+    Run the migration in <a href="{{ url_for('settings.index') }}#database">Settings → Database</a> to unlock nested folders.
+  </div>
+</div>
+{% endif %}
+
+<section class="card card-pad">
+  <div class="section-title">
+    <h2>{{ 'Categories' if not supported else 'Folders' }}</h2>
+    <span class="muted small">{{ total_docs }} document{{ '' if total_docs == 1 else 's' }} organised</span>
+  </div>
+
+  {% if supported and folders %}
+    <div class="folder-grid">
+      {% for folder in folders %}{{ folder_node(folder, counts, 0) }}{% endfor %}
+    </div>
+  {% else %}
+    <div class="chip-grid" style="margin-top:6px">
+      {% for category in categories %}
+      <a class="chips" href="{{ url_for('documents.list_documents', folder=category.name) }}">
+        {{ icon(category.icon, 'icon-sm') }} {{ category.name }}
+        <span class="chip-count">{{ legacy_counts.get(category.name, 0) }}</span>
+      </a>
+      {% endfor %}
+      <a class="chips" href="{{ url_for('documents.list_documents', folder=fallback_category) }}">
+        {{ icon('folder', 'icon-sm') }} {{ fallback_category }}
+        <span class="chip-count">{{ legacy_counts.get(fallback_category, 0) }}</span>
+      </a>
+    </div>
+    {% if not supported %}
+    <p class="muted small" style="margin-top:14px">
+      You can still move documents between these categories from any document's menu.
+    </p>
+    {% endif %}
+  {% endif %}
+</section>
+
+{% if supported %}
+<section class="card card-pad">
+  <div class="section-title"><h2>Categories</h2></div>
+  <p class="muted small" style="margin-bottom:12px">
+    Categories are broad life areas that live alongside folders. Drop a document into one
+    from its menu, or upload straight into it.
+  </p>
+  <div class="chip-grid">
+    {% for category in categories %}
+    <a class="chips" href="{{ url_for('documents.list_documents', folder=category.name) }}">
+      {{ icon(category.icon, 'icon-sm') }} {{ category.name }}
+      <span class="chip-count">{{ legacy_counts.get(category.name, 0) }}</span>
+    </a>
+    {% endfor %}
+    <a class="chips" href="{{ url_for('documents.list_documents', folder=fallback_category) }}">
+      {{ icon('folder', 'icon-sm') }} {{ fallback_category }}
+      <span class="chip-count">{{ legacy_counts.get(fallback_category, 0) }}</span>
+    </a>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

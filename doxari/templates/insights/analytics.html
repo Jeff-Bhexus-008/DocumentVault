@@ -1,0 +1,134 @@
+{% extends "layouts/app.html" %}
+{% from "partials/macros.html" import icon with context %}
+
+{% block title %}Analytics — Doxari{% endblock %}
+
+{% block page %}
+<header class="page-head">
+  <div>
+    <h1>Storage analytics</h1>
+    <p class="page-sub">Live numbers computed from your documents and private storage. No estimates.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-sm" href="{{ url_for('insights.activity') }}">{{ icon('clock', 'icon-sm') }} Activity</a>
+    <button class="btn btn-primary" type="button" data-modal-open="uploadModal">{{ icon('upload', 'icon-sm') }} Upload</button>
+  </div>
+</header>
+
+<div class="stat-grid">
+  <div class="stat">
+    <div class="stat-top"><span class="stat-icon">{{ icon('file') }}</span></div>
+    <div><div class="stat-value">{{ data.total_documents }}</div><div class="stat-label">Documents stored</div></div>
+    <div class="stat-foot">{{ counts.trash }} in trash</div>
+  </div>
+  <div class="stat">
+    <div class="stat-top"><span class="stat-icon">{{ icon('database') }}</span></div>
+    <div><div class="stat-value">{{ storage.used_display }}</div><div class="stat-label">Total size</div></div>
+    <div class="stat-foot">{{ storage.files }} stored object{{ '' if storage.files == 1 else 's' }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-top"><span class="stat-icon">{{ icon('folder') }}</span></div>
+    <div><div class="stat-value">{{ counts.folders }}</div><div class="stat-label">Folders</div></div>
+    <div class="stat-foot">{{ data.folders|length }} active categor{{ 'y' if data.folders|length == 1 else 'ies' }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-top"><span class="stat-icon">{{ icon('star') }}</span></div>
+    <div><div class="stat-value">{{ counts.favorites }}</div><div class="stat-label">Favorites</div></div>
+    <div class="stat-foot">{{ counts.shared_with_me }} shared with you</div>
+  </div>
+</div>
+
+<div class="analytics-grid">
+  <section class="card card-pad">
+    <div class="section-title">
+      <h2>Upload activity</h2>
+      <span class="muted small">last 6 months</span>
+    </div>
+    {% if data.has_history %}
+    <div class="chart-bars">
+      {% for month in data.months %}
+      <div class="chart-bar">
+        <div class="chart-bar-track">
+          <span style="height: {{ ((month.count / data.max_month) * 100)|round(0, 'floor') }}%"></span>
+        </div>
+        <div class="chart-bar-value">{{ month.count }}</div>
+        <div class="chart-bar-label">{{ month.label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <p class="muted small">
+        No uploads in the last six months yet. This chart is built from the real upload dates
+        in your records, so it fills in as you add files.
+      </p>
+    {% endif %}
+  </section>
+
+  <section class="card card-pad">
+    <div class="section-title"><h2>By file type</h2></div>
+    {% if data.file_groups %}
+    {% set max_group = (data.file_groups|map(attribute='count')|max) or 1 %}
+    <ul class="bar-list">
+      {% for group in data.file_groups %}
+      <li>
+        <div class="bar-list-head"><span>{{ group.label }}</span><strong>{{ group.count }}</strong></div>
+        <div class="bar-list-track"><span style="width: {{ ((group.count / max_group) * 100)|round(0, 'ceil') }}%"></span></div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if data.extensions %}
+    <div class="chip-grid" style="margin-top:14px">
+      {% for ext, count in data.extensions %}
+        <span class="chips">{{ (ext or 'other')|upper }} <span class="chip-count">{{ count }}</span></span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+      <p class="muted small">Upload a document to see the breakdown.</p>
+    {% endif %}
+  </section>
+
+  <section class="card card-pad" id="folders">
+    <div class="section-title"><h2>Most active folders</h2></div>
+    {% if data.folders %}
+    {% set max_folder = (data.folders|map(attribute='count')|max) or 1 %}
+    <ul class="bar-list">
+      {% for folder in data.folders %}
+      <li>
+        <div class="bar-list-head">
+          <span>{{ folder.name }}</span>
+          <strong>{{ folder.count }} · {{ folder.size|filesize }}</strong>
+        </div>
+        <div class="bar-list-track"><span style="width: {{ ((folder.count / max_folder) * 100)|round(0, 'ceil') }}%"></span></div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+      <p class="muted small">No folder activity yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="card card-pad">
+    <div class="section-title"><h2>Largest documents</h2></div>
+    {% if data.largest %}
+    <ul class="mini-list">
+      {% for document in data.largest %}
+      <li>
+        <a href="{{ url_for('documents.preview', document_id=document.id) }}">{{ document.filename }}</a>
+        <span class="muted small">{{ document.size_display }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+      <p class="muted small">Nothing stored yet.</p>
+    {% endif %}
+  </section>
+</div>
+
+{% if not usage.limit %}
+<p class="hint" style="margin-top:18px">
+  No storage limit is configured for this deployment, so Doxari reports real usage without a
+  percentage. Set <code>STORAGE_LIMIT_MB</code> in the environment to show remaining space.
+</p>
+{% endif %}
+{% endblock %}

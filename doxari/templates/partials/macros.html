@@ -1,0 +1,186 @@
+{% macro icon(name, cls='') -%}
+<svg class="icon {{ cls }}" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% macro doc_thumb(document) -%}
+{% set kind = doc_kind(document) %}
+<a class="doc-thumb" data-kind="{{ kind }}" href="{{ url_for('documents.preview', document_id=document.id) }}"
+   aria-label="Preview {{ document.filename }}">
+  {% if kind == 'image' %}
+    <img src="{{ url_for('documents.thumbnail', document_id=document.id) }}" alt="" loading="lazy"
+         onerror="this.replaceWith(document.createTextNode(''));this.parentElement.classList.add('thumb-fallback')">
+  {% else %}
+    {{ icon(doc_icon(document)) }}
+  {% endif %}
+</a>
+{%- endmacro %}
+
+{% macro doc_menu(document, trashed=False) -%}
+<details class="menu">
+  <summary class="icon-btn" title="More actions" aria-label="More actions for {{ document.filename }}">
+    {{ icon('more') }}
+  </summary>
+  <div class="dropdown menu-panel">
+    <a class="dropdown-item" href="{{ url_for('documents.preview', document_id=document.id) }}">{{ icon('eye') }} Open</a>
+    {% if not trashed %}
+    <a class="dropdown-item" href="{{ url_for('documents.download', document_id=document.id) }}">{{ icon('download') }} Download</a>
+    <form method="POST" action="{{ url_for('documents.copy', document_id=document.id) }}" data-ajax data-after="reload">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="dropdown-item" type="submit">{{ icon('copy') }} Duplicate</button>
+    </form>
+    <button class="dropdown-item" type="button" data-modal-open="moveModal"
+            data-form-action="{{ url_for('documents.move', document_id=document.id) }}"
+            data-target-label="{{ document.filename }}">{{ icon('move') }} Move to folder…</button>
+    {% if caps.sharing or caps.share_links %}
+    <button class="dropdown-item" type="button" data-modal-open="shareModal"
+            data-form-action="{{ url_for('sharing.share_document', document_id=document.id) }}"
+            data-target-label="{{ document.filename }}">{{ icon('share') }} Share…</button>
+    {% endif %}
+    <div class="divider" style="margin:6px 0"></div>
+    <form method="POST" action="{{ url_for('documents.delete', document_id=document.id) }}"
+          data-ajax data-after="reload"
+          data-confirm="{% if caps.trash %}“{{ document.filename }}” will move to the trash. You can restore it later.{% else %}“{{ document.filename }}” will be deleted permanently, because the trash upgrade is not installed. This cannot be undone.{% endif %}"
+          data-confirm-title="{% if caps.trash %}Move to trash{% else %}Delete permanently{% endif %}"
+          data-confirm-label="{% if caps.trash %}Move to trash{% else %}Delete permanently{% endif %}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="dropdown-item danger" type="submit">{{ icon('trash') }} Delete</button>
+    </form>
+    {% endif %}
+    {% if trashed %}
+    <form method="POST" action="{{ url_for('documents.restore', document_id=document.id) }}" data-ajax data-after="reload">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="dropdown-item" type="submit">{{ icon('restore') }} Restore</button>
+    </form>
+    <form method="POST" action="{{ url_for('documents.purge', document_id=document.id) }}"
+          data-ajax data-after="reload"
+          data-confirm="“{{ document.filename }}” will be deleted permanently. This cannot be undone."
+          data-confirm-title="Delete permanently" data-confirm-label="Delete forever">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="dropdown-item danger" type="submit">{{ icon('trash') }} Delete forever</button>
+    </form>
+    {% endif %}
+  </div>
+</details>
+{%- endmacro %}
+
+{% macro doc_card(document, show_select=True, trashed=False) -%}
+<div class="doc-card" data-doc-card="{{ document.id }}">
+  {% if show_select %}
+  <input type="checkbox" class="doc-select" data-doc-check="{{ document.id }}"
+         aria-label="Select {{ document.filename }}">
+  {% endif %}
+  {% if document.favorite %}<span class="doc-fav" title="Favorite">{{ icon('star-filled') }}</span>{% endif %}
+  {{ doc_thumb(document) }}
+  <div class="grow">
+    <a class="doc-name" href="{{ url_for('documents.preview', document_id=document.id) }}">{{ document.filename }}</a>
+    <div class="doc-meta" style="margin-top:6px">
+      <span>{{ document.type_label }}</span>
+      <span class="dot-sep"></span>
+      <span>{{ document.size_display }}</span>
+      <span class="dot-sep"></span>
+      <span>{{ document.created_relative }}</span>
+    </div>
+  </div>
+  <div class="doc-card-actions">
+    <a class="icon-btn" href="{{ url_for('documents.preview', document_id=document.id) }}" title="Preview" aria-label="Preview">
+      {{ icon('eye') }}
+    </a>
+    {% if not trashed %}
+    <a class="icon-btn" href="{{ url_for('documents.download', document_id=document.id) }}" title="Download" aria-label="Download">
+      {{ icon('download') }}
+    </a>
+    <button type="button" class="icon-btn {% if document.favorite %}is-favorite{% endif %}"
+            data-favorite="{{ document.id }}" title="Favorite" aria-label="Toggle favorite"
+            aria-pressed="{{ 'true' if document.favorite else 'false' }}">
+      {{ icon('star-filled' if document.favorite else 'star') }}
+    </button>
+    {% endif %}
+    <div style="margin-left:auto">{{ doc_menu(document, trashed) }}</div>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro doc_row(document, trashed=False) -%}
+<div class="doc-row" data-doc-card="{{ document.id }}">
+  <input type="checkbox" class="doc-check-inline" data-doc-check="{{ document.id }}"
+         aria-label="Select {{ document.filename }}">
+  <span class="row-type">{{ icon(doc_icon(document)) }}</span>
+  <div style="min-width:0">
+    <a class="doc-name" href="{{ url_for('documents.preview', document_id=document.id) }}">{{ document.filename }}</a>
+    <div class="doc-meta" style="margin-top:2px">
+      <span class="badge badge-outline">{{ document.type_label }}</span>
+      {% if document.favorite %}<span style="color:#d97706">{{ icon('star-filled', 'icon-sm') }}</span>{% endif %}
+    </div>
+  </div>
+  <span class="row-cell row-hide">{{ document.folder_name }}</span>
+  <span class="row-cell row-hide">{{ document.size_display }}</span>
+  <span class="row-cell">{{ document.created_relative }}</span>
+  <div class="row-actions">
+    {% if not trashed %}
+    <button type="button" class="icon-btn {% if document.favorite %}is-favorite{% endif %}"
+            data-favorite="{{ document.id }}" title="Favorite" aria-label="Toggle favorite">
+      {{ icon('star-filled' if document.favorite else 'star') }}
+    </button>
+    <a class="icon-btn" href="{{ url_for('documents.download', document_id=document.id) }}" title="Download" aria-label="Download">{{ icon('download') }}</a>
+    {% endif %}
+    <a class="icon-btn" href="{{ url_for('documents.preview', document_id=document.id) }}" title="Open" aria-label="Open">{{ icon('eye') }}</a>
+    {{ doc_menu(document, trashed) }}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro empty_state(icon_name, title, body, actions=None) -%}
+<div class="empty">
+  <div class="empty-icon">{{ icon(icon_name) }}</div>
+  <h3>{{ title }}</h3>
+  <p>{{ body }}</p>
+  {% if actions %}<div class="empty-actions">{{ actions|safe }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro pagination(page, pages) -%}
+{% if pages > 1 %}
+<nav class="pagination" aria-label="Pagination">
+  <a class="{% if page <= 1 %}is-disabled{% endif %}" href="{{ query_url(page=page-1) }}" aria-label="Previous page">
+    {{ icon('chevron-left', 'icon-sm') }}
+  </a>
+  {% set start = [1, page - 2]|max %}
+  {% set end = [pages, page + 2]|min %}
+  {% if start > 1 %}
+    <a href="{{ query_url(page=1) }}">1</a>
+    {% if start > 2 %}<span class="muted">…</span>{% endif %}
+  {% endif %}
+  {% for number in range(start, end + 1) %}
+    {% if number == page %}
+      <span class="is-current" aria-current="page">{{ number }}</span>
+    {% else %}
+      <a href="{{ query_url(page=number) }}">{{ number }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if end < pages %}
+    {% if end < pages - 1 %}<span class="muted">…</span>{% endif %}
+    <a href="{{ query_url(page=pages) }}">{{ pages }}</a>
+  {% endif %}
+  <a class="{% if page >= pages %}is-disabled{% endif %}" href="{{ query_url(page=page+1) }}" aria-label="Next page">
+    {{ icon('chevron-right', 'icon-sm') }}
+  </a>
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro sort_select(sorts, current) -%}
+<select class="select" name="sort" data-autosubmit aria-label="Sort documents" style="width:auto;min-width:158px">
+  {% for key, label in sorts.items() %}
+    <option value="{{ key }}" {% if current == key %}selected{% endif %}>{{ label }}</option>
+  {% endfor %}
+</select>
+{%- endmacro %}
+
+{% macro view_toggle(current) -%}
+<div class="view-toggle" role="group" aria-label="Layout">
+  <a href="{{ query_url(view='grid') }}" data-view-mode="grid" title="Grid view"
+     class="{% if current != 'list' %}is-active{% endif %}" aria-label="Grid view">{{ icon('grid', 'icon-sm') }}</a>
+  <a href="{{ query_url(view='list') }}" data-view-mode="list" title="List view"
+     class="{% if current == 'list' %}is-active{% endif %}" aria-label="List view">{{ icon('list', 'icon-sm') }}</a>
+</div>
+{%- endmacro %}

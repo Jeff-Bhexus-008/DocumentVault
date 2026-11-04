@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import icon with context %}
+{% block title %}Choose a new password — Doxari{% endblock %}
+{% block body %}
+<div class="public-shell">
+  {% include "partials/public_nav.html" %}
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-head">
+        <h1>Choose a new password</h1>
+        <p>Pick something at least 8 characters long.</p>
+      </div>
+      <div id="resetState">
+        <div class="form-error" id="resetError" hidden>{{ icon('alert', 'icon-sm') }} <span></span></div>
+        <form class="auth-form" id="resetForm">
+          <div class="field">
+            <label for="newPassword">New password</label>
+            <input class="input" type="password" id="newPassword" minlength="8" required autocomplete="new-password">
+          </div>
+          <div class="field">
+            <label for="confirmNew">Confirm new password</label>
+            <input class="input" type="password" id="confirmNew" minlength="8" required autocomplete="new-password">
+          </div>
+          <button class="btn btn-primary btn-block" type="submit" id="resetSubmit">Update password</button>
+        </form>
+      </div>
+      <p class="auth-aside"><a href="{{ url_for('auth.login') }}">Back to sign in</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var hash = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+  var token = hash.get("access_token");
+  var form = document.getElementById("resetForm");
+  var errorBox = document.getElementById("resetError");
+  if (!token) {
+    errorBox.hidden = false;
+    errorBox.querySelector("span").textContent = "This reset link is invalid or has expired. Request a new one from the sign-in page.";
+    form.hidden = true;
+    return;
+  }
+  form.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    var password = document.getElementById("newPassword").value;
+    var confirm = document.getElementById("confirmNew").value;
+    if (password !== confirm) {
+      errorBox.hidden = false;
+      errorBox.querySelector("span").textContent = "Those passwords don't match.";
+      return;
+    }
+    var button = document.getElementById("resetSubmit");
+    button.disabled = true;
+    try {
+      var response = await fetch("/reset-password/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content },
+        body: JSON.stringify({ access_token: token, password: password })
+      });
+      var data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not update your password.");
+      window.location.href = data.redirect || "/login";
+    } catch (error) {
+      errorBox.hidden = false;
+      errorBox.querySelector("span").textContent = error.message;
+      button.disabled = false;
+    }
+  });
+})();
+</script>
+{% endblock %}

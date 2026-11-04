@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import icon with context %}
+{% block title %}Reset your password — Doxari{% endblock %}
+{% block body %}
+<div class="public-shell">
+  {% include "partials/public_nav.html" %}
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-head">
+        <h1>Reset your password</h1>
+        <p>We'll email you a secure link to choose a new one.</p>
+      </div>
+      {% if error %}<div class="form-error">{{ icon('alert', 'icon-sm') }} <span>{{ error }}</span></div>{% endif %}
+      {% if message %}<div class="form-notice">{{ icon('check', 'icon-sm') }} <span>{{ message }}</span></div>{% endif %}
+      <form class="auth-form" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="email">Email address</label>
+          <input class="input" type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Send reset link</button>
+      </form>
+      <p class="auth-aside"><a href="{{ url_for('auth.login') }}">Back to sign in</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

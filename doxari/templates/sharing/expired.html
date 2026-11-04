@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import icon with context %}
+{% block title %}Link unavailable — Doxari{% endblock %}
+{% block body %}
+<div class="public-page">
+  <header class="public-nav">
+    <a class="brand" href="{{ url_for('main.home') }}"><img src="{{ url_for('static', filename='img/logo.svg') }}" alt=""><span>Doxari</span></a>
+  </header>
+  <main class="public-main">
+    <div class="card card-pad" style="max-width:520px;margin:0 auto;text-align:center">
+      <div class="empty-icon" style="margin:0 auto 12px">{{ icon('link') }}</div>
+      <h1 style="font-size:1.4rem;margin-bottom:8px">This link isn't available</h1>
+      <p class="muted">It may have expired, been revoked by its owner, or never existed.</p>
+      <a class="btn btn-primary" href="{{ url_for('main.home') }}" style="margin-top:18px">Go to Doxari</a>
+    </div>
+  </main>
+</div>
+{% endblock %}

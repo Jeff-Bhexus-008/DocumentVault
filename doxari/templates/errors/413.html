@@ -1,0 +1,8 @@
+{% extends "errors/_layout.html" %}
+{% block title %}File too large — Doxari{% endblock %}
+{% block error_icon %}upload{% endblock %}
+{% block error_title %}That file is too large{% endblock %}
+{% block error_body %}
+  {{ message or 'That upload was larger than the size limit for this deployment.' }}
+  Try compressing the file, or upload it in smaller parts.
+{% endblock %}

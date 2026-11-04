@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import icon with context %}
+{% block title %}{{ document.filename }} — shared on Doxari{% endblock %}
+{% block body %}
+<div class="public-page">
+  <header class="public-nav">
+    <a class="brand" href="{{ url_for('main.home') }}"><img src="{{ url_for('static', filename='img/logo.svg') }}" alt=""><span>Doxari</span></a>
+    <span class="badge badge-mint">Shared document</span>
+  </header>
+
+  <main class="public-main">
+    <div class="public-doc-head">
+      <div style="min-width:0">
+        <h1 class="public-doc-title">{{ document.filename }}</h1>
+        <p class="muted small">
+          {{ document.type_label }} · {{ document.size_display }}
+          {% if link.expires_at %} · link expires {{ link.expires_at|nicedate }}{% endif %}
+          · {{ 'view only' if link.permission == 'view' else 'download allowed' }}
+        </p>
+      </div>
+      {% if can_download %}
+      <a class="btn btn-primary" href="{{ url_for('sharing.download_shared', token=token) }}">{{ icon('download', 'icon-sm') }} Download</a>
+      {% endif %}
+    </div>
+
+    <section class="viewer card">
+      {% if document.type_group == 'image' %}
+        <div class="viewer-image"><img src="{{ url_for('sharing.public_file', token=token) }}" alt="{{ document.filename }}"></div>
+      {% elif document.ext == 'pdf' %}
+        <iframe class="viewer-frame" src="{{ url_for('sharing.public_file', token=token) }}#view=FitH" title="{{ document.filename }}" loading="lazy"></iframe>
+      {% else %}
+        <div class="viewer-fallback">
+          <div class="empty-icon">{{ icon('file-text') }}</div>
+          <h3>{{ document.type_label }} file</h3>
+          <p>This format can't be shown in the browser.{% if can_download %} Download it to open it on your device.{% else %} The owner shared it view-only, so download is disabled.{% endif %}</p>
+        </div>
+      {% endif %}
+    </section>
+
+    <p class="muted small" style="text-align:center;margin-top:18px">
+      Shared securely through Doxari. Only this document is visible through this link, and the owner can revoke access at any time.
+    </p>
+  </main>
+</div>
+{% endblock %}

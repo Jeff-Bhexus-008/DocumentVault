@@ -1,0 +1,311 @@
+{% extends "layouts/app.html" %}
+{% from "partials/macros.html" import icon with context %}
+
+{% block title %}{{ document.filename }} — Doxari{% endblock %}
+
+{% block page %}
+{% set trashed = document.deleted_at %}
+{% set owner = not shared_permission %}
+{% set group = document.type_group %}
+
+<div class="preview-head">
+  <a class="btn btn-sm btn-ghost" href="{{ request.args.get('from') or url_for('documents.list_documents') }}">
+    {{ icon('chevron-left', 'icon-sm') }} Back
+  </a>
+  <div class="preview-title">
+    <h1 title="{{ document.filename }}">{{ document.filename }}</h1>
+    <div class="preview-meta">
+      <span class="badge badge-outline">{{ document.type_label }}</span>
+      <span>{{ document.size_display }}</span>
+      <span class="dot-sep"></span>
+      <span>Uploaded {{ document.created_display }}</span>
+      {% if trashed %}<span class="badge badge-red">In trash</span>{% endif %}
+      {% if shared_permission %}
+        <span class="badge badge-mint">Shared · {{ 'can download' if shared_permission == 'download' else 'view only' }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="preview-actions">
+    {% if prev_doc %}
+    <a class="icon-btn" href="{{ url_for('documents.preview', document_id=prev_doc.id) }}" title="Previous: {{ prev_doc.filename }}" aria-label="Previous document">{{ icon('chevron-left') }}</a>
+    {% endif %}
+    {% if next_doc %}
+    <a class="icon-btn" href="{{ url_for('documents.preview', document_id=next_doc.id) }}" title="Next: {{ next_doc.filename }}" aria-label="Next document">{{ icon('chevron-right') }}</a>
+    {% endif %}
+    {% if owner and not trashed %}
+    <a class="btn btn-sm" href="{{ url_for('documents.download', document_id=document.id) }}">{{ icon('download', 'icon-sm') }} Download</a>
+    <button class="btn btn-sm" type="button" data-modal-open="shareModal" data-form-action="{{ url_for('sharing.share_document', document_id=document.id) }}">
+      {{ icon('share', 'icon-sm') }} Share
+    </button>
+    {% elif shared_permission == 'download' %}
+    <a class="btn btn-sm" href="{{ url_for('documents.download', document_id=document.id) }}">{{ icon('download', 'icon-sm') }} Download</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="preview-grid">
+  <section class="viewer card">
+    {% if group == 'image' and document.can_preview %}
+      <div class="viewer-image">
+        <img src="{{ url_for('documents.raw', document_id=document.id) }}" alt="{{ document.filename }}">
+      </div>
+    {% elif document.ext == 'pdf' %}
+      <iframe class="viewer-frame" src="{{ url_for('documents.raw', document_id=document.id) }}#view=FitH"
+              title="PDF preview of {{ document.filename }}" loading="lazy"></iframe>
+    {% elif group == 'text' or document.ext in ['csv', 'json', 'md', 'txt'] %}
+      <pre class="viewer-text" data-text-preview="{{ url_for('documents.document_text', document_id=document.id) }}">Loading text…</pre>
+    {% else %}
+      <div class="viewer-fallback">
+        <div class="empty-icon">{{ icon(doc_icon(document)) }}</div>
+        <h3>No in-browser preview for {{ (document.ext or 'this format')|upper }} files</h3>
+        <p>
+          Doxari keeps the original file safe in private storage. Download it to open it in
+          {% if group == 'document' %}Word or your office suite{% elif group == 'spreadsheet' %}Excel or your spreadsheet app{% elif group == 'presentation' %}PowerPoint or your presentation app{% elif group == 'archive' %}your archive tool{% else %}the right application{% endif %}.
+        </p>
+        <div class="empty-actions">
+          {% if owner or shared_permission == 'download' %}
+          <a class="btn btn-primary" href="{{ url_for('documents.download', document_id=document.id) }}">{{ icon('download', 'icon-sm') }} Download {{ document.type_label }}</a>
+          {% else %}
+          <span class="muted small">The owner shared this with view-only access, so downloading is disabled.</span>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+  <aside class="preview-side">
+    <section class="card card-pad">
+      <div class="section-title"><h2>Details</h2></div>
+      <dl class="details">
+        <div><dt>Type</dt><dd>{{ info.label }}{% if info.ext %} · .{{ info.ext }}{% endif %}</dd></div>
+        <div><dt>Size</dt><dd>{{ document.size_display }}</dd></div>
+        <div><dt>Uploaded</dt><dd>{{ document.created_display }}</dd></div>
+        <div><dt>Modified</dt><dd>{{ document.updated_display }}</dd></div>
+        <div><dt>Folder</dt><dd>{{ (document.folder_name or 'General') }}</dd></div>
+        {% if document.tags %}
+        <div><dt>Tags</dt><dd class="tag-row">{% for tag in document.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</dd></div>
+        {% endif %}
+        {% if document.description %}
+        <div><dt>Notes</dt><dd>{{ document.description }}</dd></div>
+        {% endif %}
+      </dl>
+    </section>
+
+    {% if owner %}
+    <section class="card card-pad">
+      <div class="section-title"><h2>Organise</h2></div>
+
+      {% if not trashed %}
+      <form method="POST" action="{{ url_for('documents.rename', document_id=document.id) }}" data-ajax data-after="reload" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="label" for="renameInput">File name</label>
+        <div class="inline">
+          <input class="input" id="renameInput" name="filename" value="{{ document.filename }}" maxlength="120" required>
+          <button class="btn btn-sm" type="submit">{{ icon('edit', 'icon-sm') }} Rename</button>
+        </div>
+      </form>
+
+      <form method="POST" action="{{ url_for('documents.move', document_id=document.id) }}" data-ajax data-after="reload" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="label" for="moveSelect">Move to</label>
+        <div class="inline">
+          <select class="select" id="moveSelect" name="folder_id">
+            <option value="">All documents (no folder)</option>
+            {% for folder in folders %}
+            <option value="{{ folder.id }}" {% if document.folder_id == folder.id %}selected{% endif %}>{{ folder.path or folder.name }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm" type="submit">{{ icon('move', 'icon-sm') }} Move</button>
+        </div>
+        <div class="inline" style="margin-top:8px">
+          <select class="select" name="folder" aria-label="Category">
+            {% for category in categories %}
+            <option value="{{ category.name }}" {% if document.folder == category.name %}selected{% endif %}>{{ category.name }}</option>
+            {% endfor %}
+            <option value="{{ fallback_category }}" {% if (document.folder or fallback_category) == fallback_category %}selected{% endif %}>{{ fallback_category }}</option>
+          </select>
+        </div>
+        <p class="hint">Pick a folder, a category, or both. Categories work even without folders.</p>
+      </form>
+
+      <div class="button-row">
+        <button class="btn btn-sm {% if document.favorite %}btn-primary{% endif %}" type="button" data-favorite="{{ document.id }}">
+          {{ icon('star-filled' if document.favorite else 'star', 'icon-sm') }}
+          {{ 'Favorited' if document.favorite else 'Favorite' }}
+        </button>
+        {% if caps.sharing %}
+        <form method="POST" action="{{ url_for('documents.copy', document_id=document.id) }}" data-ajax data-after="reload">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm" type="submit">{{ icon('copy', 'icon-sm') }} Duplicate</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('documents.details', document_id=document.id) }}" data-ajax data-after="reload" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="label" for="tagsInput">Tags</label>
+        <input class="input" id="tagsInput" name="tags" value="{{ document.tags|join(', ') }}" placeholder="invoice, 2026, tax">
+        <label class="label" for="descInput">Description</label>
+        <textarea class="input" id="descInput" name="description" rows="2" maxlength="1000" placeholder="What is this document for?">{{ document.description or '' }}</textarea>
+        <button class="btn btn-sm" type="submit">{{ icon('check', 'icon-sm') }} Save details</button>
+      </form>
+    </section>
+    {% endif %}
+
+    {% if owner and caps.sharing %}
+    <section class="card card-pad">
+      <div class="section-title">
+        <h2>Sharing</h2>
+        {% if shares or share_links %}<span class="badge badge-mint">{{ shares|length + share_links|length }} active</span>{% endif %}
+      </div>
+
+      <form method="POST" action="{{ url_for('sharing.share_document', document_id=document.id) }}" data-ajax data-after="reload" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="label" for="shareEmail">Share with a Doxari account</label>
+        <input class="input" id="shareEmail" name="email" type="email" placeholder="teammate@example.com" required autocomplete="off">
+        <div class="inline">
+          <select class="select" name="permission" aria-label="Permission">
+            <option value="view">View only</option>
+            <option value="download">Can download</option>
+          </select>
+          <button class="btn btn-sm" type="submit">{{ icon('share', 'icon-sm') }} Share</button>
+        </div>
+      </form>
+
+      {% if shares %}
+      <ul class="share-list">
+        {% for share in shares %}
+        <li>
+          <div>
+            <strong>{{ share.shared_with_email or share.shared_with_id }}</strong>
+            <span class="muted small">{{ 'View only' if share.permission == 'view' else 'Can download' }}</span>
+          </div>
+          <form method="POST" action="{{ url_for('sharing.revoke', share_id=share.id) }}" data-ajax data-after="reload">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-ghost" type="submit">Revoke</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if caps.share_links %}
+      <form method="POST" action="{{ url_for('sharing.create_link', document_id=document.id) }}" data-ajax data-after="reload" class="stack" style="margin-top:14px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="label">Public link</label>
+        <div class="inline">
+          <select class="select" name="permission" aria-label="Link permission">
+            <option value="view">View only</option>
+            <option value="download">Can download</option>
+          </select>
+          <select class="select" name="expires_days" aria-label="Link expiry">
+            <option value="1">Expires in 1 day</option>
+            <option value="7" selected>Expires in 7 days</option>
+            <option value="30">Expires in 30 days</option>
+            <option value="0">No expiry</option>
+          </select>
+          <button class="btn btn-sm" type="submit">{{ icon('link', 'icon-sm') }} Create</button>
+        </div>
+        <p class="hint">Anyone with the link can open this document until it expires. Revoke any time.</p>
+      </form>
+
+      {% if share_links %}
+      <ul class="share-list">
+        {% for link in share_links %}
+        <li>
+          <div style="min-width:0">
+            <span class="muted small">{{ 'View only' if link.permission == 'view' else 'Can download' }} ·
+              {{ ('expires ' ~ (link.expires_at|nicedate)) if link.expires_at else 'no expiry' }}</span>
+            <div class="link-url">{{ url_for('sharing.public_link', token=link.token, _external=True) }}</div>
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-sm btn-ghost" type="button"
+                    data-copy="{{ url_for('sharing.public_link', token=link.token, _external=True) }}">{{ icon('copy', 'icon-sm') }}</button>
+            <form method="POST" action="{{ url_for('sharing.revoke_link', link_id=link.id) }}" data-ajax data-after="reload">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-ghost" type="submit">Revoke</button>
+            </form>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if owner and caps.ai %}
+    <section class="card card-pad" id="aiPanel" data-ai-panel="{{ document.id }}">
+      <div class="section-title">
+        <h2>{{ icon('sparkles', 'icon-sm') }} AI assistant</h2>
+        {% if ai_status.configured %}<span class="badge badge-mint">{{ ai_status.label }}</span>{% endif %}
+      </div>
+      {% if not ai_status.configured %}
+        <p class="muted small">
+          AI assist is wired but not switched on. Add an <code>AI_API_KEY</code> (and optionally
+          <code>AI_PROVIDER</code> / <code>AI_MODEL</code>) in your deployment environment and these
+          actions start working. Nothing is ever sent anywhere until then.
+        </p>
+        <a class="link small" href="{{ url_for('settings.index') }}#ai">Setup details</a>
+      {% elif not can_ai %}
+        <p class="muted small">This file type can't be read as text, so {{ ai_status.label }} can't analyse it. PDFs, text, CSV, Markdown and JSON work.</p>
+      {% elif not prefs.ai_consent %}
+        <p class="muted small">
+          Before using AI on your documents, confirm you're happy for the text of this document to be
+          sent to {{ ai_status.label }} for processing.
+        </p>
+        <a class="btn btn-sm" href="{{ url_for('settings.index') }}#ai">Review and enable</a>
+      {% else %}
+        <div class="ai-actions">
+          <button class="btn btn-sm" type="button" data-ai-task="summarize">Summarize</button>
+          <button class="btn btn-sm" type="button" data-ai-task="keypoints">Key points</button>
+          <button class="btn btn-sm" type="button" data-ai-task="keywords">Keywords</button>
+          <button class="btn btn-sm" type="button" data-ai-task="describe">Describe</button>
+        </div>
+        <form class="stack" data-ai-ask>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="label" for="aiQuestion">Ask about this document</label>
+          <div class="inline">
+            <input class="input" id="aiQuestion" name="question" placeholder="What are the payment terms?" required>
+            <button class="btn btn-sm btn-primary" type="submit">Ask</button>
+          </div>
+        </form>
+        <div class="ai-output" data-ai-output hidden></div>
+        <p class="hint">Processed by {{ ai_status.label }}. Results are a helpful summary, not legal or financial advice.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if owner %}
+    <section class="card card-pad">
+      <div class="section-title"><h2>{{ 'Danger zone' if trashed else 'Remove' }}</h2></div>
+      {% if trashed %}
+        <div class="button-row">
+          <form method="POST" action="{{ url_for('documents.restore', document_id=document.id) }}" data-ajax data-after="reload">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-primary" type="submit">{{ icon('restore', 'icon-sm') }} Restore</button>
+          </form>
+          <form method="POST" action="{{ url_for('documents.purge', document_id=document.id) }}" data-ajax data-after="goto"
+                data-goto="{{ url_for('documents.trash') }}"
+                data-confirm="Permanently delete “{{ document.filename }}”? The file is removed from storage and cannot be recovered.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-danger" type="submit">{{ icon('trash', 'icon-sm') }} Delete forever</button>
+          </form>
+        </div>
+      {% else %}
+        <form method="POST" action="{{ url_for('documents.delete', document_id=document.id) }}" data-ajax data-after="goto"
+              data-goto="{{ url_for('documents.list_documents') }}"
+              data-confirm="Move “{{ document.filename }}” to trash? You can restore it later from Trash.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-danger" type="submit">{{ icon('trash', 'icon-sm') }} Move to trash</button>
+        </form>
+        {% if not caps.trash %}
+        <p class="hint">Trash needs the database upgrade, so this deletes permanently.</p>
+        {% endif %}
+      {% endif %}
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

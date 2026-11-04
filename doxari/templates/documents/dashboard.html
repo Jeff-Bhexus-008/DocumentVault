@@ -1,0 +1,197 @@
+{% extends "layouts/app.html" %}
+{% from "partials/macros.html" import icon, doc_card, empty_state with context %}
+
+{% block title %}Dashboard — Doxari{% endblock %}
+
+{% block page %}
+{% if missing_setup %}
+<div class="setup-note">
+  {{ icon('info') }}
+  <div>
+    <strong>Some upgrades are waiting on one SQL step.</strong>
+    Your documents, folders and sharing work with what is already installed, but
+    {{ missing_setup|join(', ') }} unlock after you run the migration in Supabase.
+    <a href="{{ url_for('settings.index') }}#database">See the setup details</a>.
+  </div>
+</div>
+{% endif %}
+
+<section class="welcome">
+  <div class="welcome-text">
+    <h1>Welcome back, {{ user_display_name }}</h1>
+    <p>Your documents, organized and secure. Everything is right where you left it.</p>
+  </div>
+  <div class="welcome-actions">
+    <button class="btn btn-primary" type="button" data-modal-open="uploadModal">
+      {{ icon('upload', 'icon-sm') }} Upload document
+    </button>
+    <button class="btn" type="button" data-modal-open="folderModal">
+      {{ icon('folder-plus', 'icon-sm') }} New folder
+    </button>
+  </div>
+</section>
+
+<div class="stat-grid">
+  <a class="stat" href="{{ url_for('documents.list_documents') }}">
+    <div class="stat-top">
+      <span class="stat-icon">{{ icon('file') }}</span>
+      <span class="badge badge-outline">All files</span>
+    </div>
+    <div>
+      <div class="stat-value">{{ counts.documents }}</div>
+      <div class="stat-label">Documents</div>
+    </div>
+    <div class="stat-foot">{{ counts.favorites }} favorite{{ '' if counts.favorites == 1 else 's' }}</div>
+  </a>
+
+  <a class="stat" href="{{ url_for('folders.index') }}">
+    <div class="stat-top">
+      <span class="stat-icon">{{ icon('folder') }}</span>
+      {% if not caps.folders %}<span class="badge badge-amber">Setup</span>{% endif %}
+    </div>
+    <div>
+      <div class="stat-value">{{ counts.folders }}</div>
+      <div class="stat-label">Folders</div>
+    </div>
+    <div class="stat-foot">{{ 'Nested folders enabled' if caps.folders else 'Categories still available' }}</div>
+  </a>
+
+  <a class="stat" href="{{ url_for('insights.analytics') }}">
+    <div class="stat-top">
+      <span class="stat-icon">{{ icon('database') }}</span>
+      <span class="badge badge-outline">{{ usage.files }} files</span>
+    </div>
+    <div>
+      <div class="stat-value">{{ usage.used_display }}</div>
+      <div class="stat-label">Storage used</div>
+    </div>
+    {% if usage.limit %}
+      <div>
+        <div class="progress"><span style="width: {{ usage.percent }}%"></span></div>
+        <div class="stat-foot" style="margin-top:6px">{{ usage.percent }}% of {{ usage.limit_display }} · {{ usage.remaining_display }} free</div>
+      </div>
+    {% else %}
+      <div class="stat-foot">Private storage · no plan limit configured</div>
+    {% endif %}
+  </a>
+
+  <a class="stat" href="{{ url_for('documents.favorites') }}">
+    <div class="stat-top">
+      <span class="stat-icon">{{ icon('star') }}</span>
+      {% if counts.trash %}<span class="badge badge-outline">{{ counts.trash }} in trash</span>{% endif %}
+    </div>
+    <div>
+      <div class="stat-value">{{ counts.favorites }}</div>
+      <div class="stat-label">Favorites</div>
+    </div>
+    <div class="stat-foot">
+      {% if caps.sharing %}{{ counts.shared_with_me }} shared with you{% else %}Sharing unlocks after setup{% endif %}
+    </div>
+  </a>
+</div>
+
+{% if is_empty %}
+{{ empty_state('upload', 'Your document space is ready',
+   'Upload your first file and start organizing your digital life. PDFs, images, Office documents and ZIP files are all welcome.',
+   '<button class="btn btn-primary" type="button" data-modal-open="uploadModal">Upload your first document</button>
+    <button class="btn" type="button" data-modal-open="folderModal">Create a folder</button>') }}
+{% else %}
+<div class="dash-grid">
+  <div class="dash-col">
+    <section class="card">
+      <div class="card-header">
+        <h2>Recent documents</h2>
+        <a class="link small" href="{{ url_for('documents.list_documents') }}">View all {{ icon('arrow-right', 'icon-sm') }}</a>
+      </div>
+      <div class="card-body">
+        {% if recent %}
+        <div class="doc-grid">
+          {% for document in recent %}{{ doc_card(document, show_select=False) }}{% endfor %}
+        </div>
+        {% else %}
+        <p class="muted small">Nothing uploaded yet.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if accessed %}
+    <section class="card">
+      <div class="card-header">
+        <h2>Recently opened</h2>
+        <a class="link small" href="{{ url_for('documents.recent') }}">See all {{ icon('arrow-right', 'icon-sm') }}</a>
+      </div>
+      <div class="card-body">
+        <div class="doc-grid">
+          {% for document in accessed %}{{ doc_card(document, show_select=False) }}{% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
+  <div class="dash-col">
+    <section class="card card-pad">
+      <div class="section-title"><h2>Quick access</h2></div>
+      <div class="quick-grid">
+        <a class="quick" href="{{ url_for('documents.list_documents') }}">{{ icon('file') }} All documents</a>
+        <a class="quick" href="{{ url_for('folders.index') }}">{{ icon('folder') }} My folders</a>
+        <a class="quick" href="{{ url_for('documents.favorites') }}">{{ icon('star') }} Favorites</a>
+        <a class="quick" href="{{ url_for('documents.recent') }}">{{ icon('clock') }} Recent</a>
+        <a class="quick" href="{{ url_for('sharing.shared') }}">{{ icon('share') }} Shared with me</a>
+        <a class="quick" href="{{ url_for('documents.trash') }}">{{ icon('trash') }} Trash</a>
+        <a class="quick" href="{{ url_for('insights.analytics') }}">{{ icon('chart') }} Analytics</a>
+        <a class="quick" href="{{ url_for('settings.index') }}">{{ icon('settings') }} Settings</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Recent activity</h2>
+        <a class="link small" href="{{ url_for('insights.activity') }}">History</a>
+      </div>
+      <div class="card-body">
+        {% if activity %}
+        <div class="activity">
+          {% for item in activity %}
+          <div class="activity-item">
+            <span class="activity-icon">{{ icon(item.icon) }}</span>
+            <div class="activity-body">
+              <div class="activity-title">
+                {{ item.verb }}{% if item.document_name %} <strong>{{ item.document_name }}</strong>{% endif %}
+              </div>
+              <div class="activity-meta">{{ item.when }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% elif caps.activity %}
+        <p class="muted small">Your activity will appear here as you work.</p>
+        {% else %}
+        <p class="muted small">
+          Detailed activity history turns on after the database upgrade. Everything you do
+          now still appears in your folders and Trash.
+        </p>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if folders %}
+    <section class="card">
+      <div class="card-header"><h2>Your folders</h2><a class="link small" href="{{ url_for('folders.index') }}">Manage</a></div>
+      <div class="card-body">
+        <ul class="tree">
+          {% for folder in folders[:6] %}
+          <li>
+            <a class="tree-link" href="{{ url_for('documents.list_documents', folder_id=folder.id) }}">
+              {{ icon('folder', 'icon-sm') }} {{ folder.name }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "layouts/app.html" %}
+{% from "partials/macros.html" import icon, doc_card, doc_row, empty_state, pagination with context %}
+
+{% block title %}Trash — Doxari{% endblock %}
+
+{% block page %}
+{% set view = prefs.view_mode or 'grid' %}
+
+<header class="page-head">
+  <div>
+    <h1>Trash</h1>
+    <p class="page-sub">
+      {% if unavailable %}
+        Recoverable deletion needs the database upgrade
+      {% else %}
+        {{ total }} document{{ '' if total == 1 else 's' }} · deleted documents stay here until you remove them
+      {% endif %}
+    </p>
+  </div>
+  {% if documents %}
+  <div class="page-actions">
+    <form method="POST" action="{{ url_for('documents.empty_trash') }}" data-ajax data-after="reload"
+          data-confirm="Permanently delete every document in Trash? This cannot be undone and the files are removed from storage.">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="confirm" value="EMPTY">
+      <button class="btn btn-danger" type="submit">{{ icon('trash', 'icon-sm') }} Empty trash</button>
+    </form>
+  </div>
+  {% endif %}
+</header>
+
+{% if unavailable %}
+<div class="setup-note">
+  {{ icon('info') }}
+  <div>
+    <strong>Trash is waiting on one SQL step.</strong>
+    Until the upgrade is applied, deleting a document removes it permanently, and Doxari
+    asks you to confirm before doing so.
+    <a href="{{ url_for('settings.index') }}#database">Setup instructions</a>
+  </div>
+</div>
+{% elif documents %}
+<div class="callout">
+  {{ icon('restore') }}
+  <p>Documents in Trash keep their original folder. Restore puts them back exactly where they were.</p>
+</div>
+
+<div class="bulk-bar" data-bulk-bar hidden>
+  <span><strong data-bulk-count>0</strong> selected</span>
+  <div class="bulk-actions">
+    <button class="btn btn-sm" type="button" data-bulk-action="restore">{{ icon('restore', 'icon-sm') }} Restore</button>
+    <button class="btn btn-sm btn-danger" type="button" data-bulk-action="purge">{{ icon('trash', 'icon-sm') }} Delete forever</button>
+  </div>
+</div>
+
+{% if view == 'list' %}
+<div class="doc-list">
+  <div class="doc-list-head">
+    <span></span><span></span><span>Name</span>
+    <span class="row-hide">Folder</span><span class="row-hide">Size</span><span>Deleted</span><span></span>
+  </div>
+  {% for document in documents %}{{ doc_row(document, trashed=True) }}{% endfor %}
+</div>
+{% else %}
+<div class="doc-grid">
+  {% for document in documents %}{{ doc_card(document, trashed=True) }}{% endfor %}
+</div>
+{% endif %}
+
+{{ pagination(page, pages) }}
+{% else %}
+{{ empty_state('trash', 'Trash is empty',
+   'Deleted documents land here so you can bring them back. Nothing to recover right now.',
+   '<a class="btn" href="' ~ url_for('documents.list_documents') ~ '">Back to documents</a>') }}
+{% endif %}
+{% endblock %}

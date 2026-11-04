@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import icon with context %}
+{% block body %}
+<div class="public-page error-page">
+  <header class="public-nav">
+    <a class="brand" href="{{ url_for('main.home') }}">
+      <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="">
+      <span class="brand-text"><span class="brand-name">Doxari</span></span>
+    </a>
+    <div class="nav-actions">
+      {% if current_user %}<a class="btn btn-sm" href="{{ url_for('documents.dashboard') }}">Dashboard</a>{% else %}<a class="btn btn-sm" href="{{ url_for('auth.login') }}">Sign in</a>{% endif %}
+    </div>
+  </header>
+  <main class="public-main">
+    <div class="card card-pad error-card">
+      <div class="empty-icon">{{ icon(self.error_icon()) }}</div>
+      <h1>{% block error_title %}Something went wrong{% endblock %}</h1>
+      <p class="muted">{% block error_body %}{% endblock %}</p>
+      <div class="empty-actions">
+        {% if current_user %}
+          <a class="btn btn-primary" href="{{ url_for('documents.dashboard') }}">Back to dashboard</a>
+          <a class="btn" href="{{ url_for('documents.list_documents') }}">All documents</a>
+        {% else %}
+          <a class="btn btn-primary" href="{{ url_for('main.home') }}">Go to Doxari</a>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}
+{% block error_icon %}alert{% endblock %}

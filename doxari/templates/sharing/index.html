@@ -1,0 +1,73 @@
+{% extends "layouts/app.html" %}
+{% from "partials/macros.html" import icon, doc_card, empty_state with context %}
+
+{% block title %}Shared — Doxari{% endblock %}
+
+{% block page %}
+<header class="page-head">
+  <div>
+    <h1>Shared documents</h1>
+    <p class="page-sub">Documents other people shared with you, and the ones you've shared out.</p>
+  </div>
+</header>
+
+{% if not supported %}
+<div class="setup-note">
+  {{ icon('info') }}
+  <div>
+    <strong>Sharing needs the database upgrade.</strong>
+    The sharing permission tables aren't installed yet, so Doxari won't pretend a share exists.
+    Run the migration in <a href="{{ url_for('settings.index') }}#database">Settings → Database</a>,
+    then each document's preview page gains a working Share panel.
+  </div>
+</div>
+{% else %}
+<section class="card">
+  <div class="card-header">
+    <h2>Shared with me</h2>
+    <span class="badge badge-outline">{{ with_me|length }}</span>
+  </div>
+  <div class="card-body">
+    {% if with_me %}
+      <div class="doc-grid">
+        {% for document in with_me %}{{ doc_card(document, show_select=False) }}{% endfor %}
+      </div>
+    {% else %}
+      <p class="muted small">Nothing has been shared with you yet. When someone shares a document, it appears here with its permission level.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card" style="margin-top:18px">
+  <div class="card-header">
+    <h2>Shared by me</h2>
+    <span class="badge badge-outline">{{ by_me|length }}</span>
+  </div>
+  <div class="card-body">
+    {% if by_me %}
+    <ul class="share-list">
+      {% for share in by_me %}
+      <li>
+        <div style="min-width:0">
+          <a class="doc-name" href="{{ url_for('documents.preview', document_id=share.document_id) }}">{{ share.document.filename }}</a>
+          <div class="muted small">
+            {{ share.document.get('filename') }} · shared with {{ share.shared_with_email or share.shared_with_id }} ·
+            {{ 'view only' if share.permission == 'view' else 'can download' }} ·
+            {{ share.when|relative }}
+          </div>
+        </div>
+        <form method="POST" action="{{ url_for('sharing.revoke', share_id=share.id) }}" data-ajax data-after="reload"
+              data-confirm="Revoke this person's access?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-ghost" type="submit">Revoke</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+      <p class="muted small">You haven't shared any documents yet. Open a document and use Share in its preview.</p>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

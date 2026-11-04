@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme if theme in ['light', 'dark'] else 'light' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{% block title %}Doxari — Your documents, organized and secure{% endblock %}</title>
+  <meta name="description" content="{% block description %}Doxari is a calm, secure home for your documents. Upload, organize, search, preview and share your files with confidence.{% endblock %}">
+  <meta name="theme-color" content="#166534">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="robots" content="{% block robots %}noindex, nofollow{% endblock %}">
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("doxari-theme");
+        if (stored === "dark" || stored === "light") {
+          document.documentElement.dataset.theme = stored;
+        }
+      } catch (e) {}
+    })();
+  </script>
+  {% block head %}{% endblock %}
+</head>
+<body data-upload-enabled="{{ '1' if current_user else '0' }}" {% block body_attrs %}{% endblock %}>
+{% block body %}{% endblock %}
+
+{% for category, message in get_flashed_messages(with_categories=true) %}
+  <span hidden data-flash="{{ message }}" data-flash-type="{{ 'error' if category in ['error', 'danger'] else ('info' if category == 'info' else 'success') }}"></span>
+{% endfor %}
+
+<dialog class="modal" id="confirmDialog" aria-labelledby="confirmTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span class="icon-wrap danger"><svg class="icon" aria-hidden="true"><use href="/static/img/icons.svg#i-alert"></use></svg></span>
+      <div>
+        <h2 id="confirmTitle">Are you sure?</h2>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p id="confirmBody"></p>
+      <p id="confirmNote" class="small" hidden></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn" data-modal-close>Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

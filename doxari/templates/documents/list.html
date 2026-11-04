@@ -1,0 +1,154 @@
+{% extends "layouts/app.html" %}
+{% from "partials/macros.html" import icon, doc_card, doc_row, empty_state, pagination, sort_select, view_toggle with context %}
+
+{% block title %}{{ heading }} — Doxari{% endblock %}
+
+{% block page %}
+{% set view = prefs.view_mode or 'grid' %}
+{% set folder_record = folder_record|default(none, true) %}
+{% set breadcrumbs = breadcrumbs|default([], true) %}
+
+<header class="page-head">
+  <div>
+    {% if breadcrumbs %}
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="{{ url_for('documents.list_documents') }}">All documents</a>
+      {% for crumb in breadcrumbs %}
+        {{ icon('chevron-right', 'icon-sm') }}
+        {% if loop.last %}
+          <span aria-current="page">{{ crumb.name }}</span>
+        {% else %}
+          <a href="{{ url_for('documents.list_documents', folder_id=crumb.id) }}">{{ crumb.name }}</a>
+        {% endif %}
+      {% endfor %}
+    </nav>
+    {% endif %}
+    <h1>{{ heading }}</h1>
+    <p class="page-sub">
+      {{ summary }}{% if summary and total %} · {% endif %}{{ total }} document{{ '' if total == 1 else 's' }}
+    </p>
+  </div>
+  <div class="page-actions">
+    {% if folder_record %}
+    <a class="btn btn-sm" href="{{ url_for('insights.analytics') }}#folders">{{ icon('chart', 'icon-sm') }} Folder insights</a>
+    {% endif %}
+    <button class="btn" type="button" data-modal-open="folderModal">{{ icon('folder-plus', 'icon-sm') }} New folder</button>
+    <button class="btn btn-primary" type="button" data-modal-open="uploadModal">{{ icon('upload', 'icon-sm') }} Upload</button>
+  </div>
+</header>
+
+<form class="toolbar" method="GET" action="{{ request.path }}" id="filterForm" role="search">
+  <div class="toolbar-search">
+    {{ icon('search') }}
+    <input type="search" name="q" value="{{ filters.search }}" placeholder="Search in {{ heading|lower }}…"
+           aria-label="Search documents" autocomplete="off">
+  </div>
+
+  <select class="select" name="type" data-autosubmit aria-label="Filter by type" style="width:auto">
+    <option value="">All types</option>
+    {% for key, group in file_groups.items() %}
+      <option value="{{ key }}" {% if filters.group == key %}selected{% endif %}>{{ group }}</option>
+    {% endfor %}
+  </select>
+
+  {% if caps.folders and folders %}
+  <select class="select" name="folder_id" data-autosubmit aria-label="Filter by folder" style="width:auto">
+    <option value="">All folders</option>
+    {% for folder in folders %}
+      <option value="{{ folder.id }}" {% if filters.folder_id == folder.id %}selected{% endif %}>{{ folder.path or folder.name }}</option>
+    {% endfor %}
+  </select>
+  {% elif filters.folder %}
+    <input type="hidden" name="folder" value="{{ filters.folder }}">
+  {% endif %}
+
+  <details class="filter-pop">
+    <summary class="btn btn-sm btn-ghost">{{ icon('calendar', 'icon-sm') }}
+      {% if filters.date_from or filters.date_to %}Dates{% else %}Date{% endif %}
+    </summary>
+    <div class="filter-pop-body">
+      <label class="label" for="fromDate">Uploaded from</label>
+      <input class="input" id="fromDate" type="date" name="from" value="{{ filters.date_from or '' }}">
+      <label class="label" for="toDate">Uploaded until</label>
+      <input class="input" id="toDate" type="date" name="to" value="{{ filters.date_to or '' }}">
+      <button class="btn btn-sm btn-primary" type="submit">Apply dates</button>
+    </div>
+  </details>
+
+  {{ sort_select(sorts, filters.sort) }}
+  {{ view_toggle(view) }}
+
+  {% if filters.search or filters.group or filters.date_from or filters.date_to or filters.folder_id or filters.folder or filters.favorites %}
+    <a class="btn btn-sm btn-ghost" href="{{ request.path }}{% if filters.folder %}?folder={{ filters.folder }}{% endif %}">{{ icon('close', 'icon-sm') }} Clear</a>
+  {% endif %}
+</form>
+
+{% if documents %}
+  <div class="bulk-bar" data-bulk-bar hidden>
+    <span><strong data-bulk-count>0</strong> selected</span>
+    <div class="bulk-actions">
+      <button class="btn btn-sm" type="button" data-bulk-action="favorite">{{ icon('star', 'icon-sm') }} Favorite</button>
+      <button class="btn btn-sm" type="button" data-modal-open="bulkMoveModal">{{ icon('move', 'icon-sm') }} Move</button>
+      <button class="btn btn-sm btn-danger" type="button" data-bulk-action="delete">{{ icon('trash', 'icon-sm') }} Move to trash</button>
+    </div>
+  </div>
+
+  {% if view == 'list' %}
+  <div class="doc-list" id="docList">
+    <div class="doc-list-head">
+      <span></span><span></span><span>Name</span>
+      <span class="row-hide">Folder</span><span class="row-hide">Size</span><span>Uploaded</span><span></span>
+    </div>
+    {% for document in documents %}{{ doc_row(document) }}{% endfor %}
+  </div>
+  {% else %}
+  <div class="doc-grid" id="docList">
+    {% for document in documents %}{{ doc_card(document) }}{% endfor %}
+  </div>
+  {% endif %}
+
+  {{ pagination(page, pages) }}
+{% else %}
+  {% if filters.search or filters.group or filters.date_from or filters.date_to or filters.folder_id %}
+    {{ empty_state('search', 'No documents match those filters',
+       'Try a shorter search term, a different file type, or clear the filters to see everything again.',
+       '<a class="btn" href="' ~ request.path ~ '">Clear filters</a>') }}
+  {% else %}
+    {{ empty_state('upload', 'Nothing here yet',
+       'Upload a file or create a folder to get started. Everything you add stays private to your account.',
+       '<button class="btn btn-primary" type="button" data-modal-open="uploadModal">Upload a document</button>
+        <button class="btn" type="button" data-modal-open="folderModal">New folder</button>') }}
+  {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<dialog class="modal" id="bulkMoveModal" aria-labelledby="bulkMoveTitle">
+  <div class="modal-card">
+    <form id="bulkMoveForm">
+      <div class="modal-head">
+        <span class="icon-wrap"><svg class="icon" aria-hidden="true"><use href="/static/img/icons.svg#i-move"></use></svg></span>
+        <div>
+          <h2 id="bulkMoveTitle">Move selected documents</h2>
+          <p class="small muted">Choose the folder that should hold them.</p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="bulkFolder">Destination folder</label>
+          <select class="select" id="bulkFolder" name="folder_id">
+            <option value="">No folder</option>
+            {% for folder in folders_for_modals|default([]) %}
+              <option value="{{ folder.id }}">{{ folder.path or folder.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Move documents</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+{% endblock %}

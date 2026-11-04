@@ -1,0 +1,36 @@
+{% from "partials/macros.html" import icon with context %}
+{% macro folder_node(folder, counts, depth) -%}
+<article class="folder-card" style="--depth: {{ depth }}">
+  <div class="folder-card-top">
+    <span class="folder-badge" style="--folder-color: {{ folder.color or '#166534' }}">
+      {{ icon(folder.icon or 'folder', 'icon-sm') }}
+    </span>
+    <div class="grow">
+      <a class="folder-name" href="{{ url_for('documents.list_documents', folder_id=folder.id) }}">{{ folder.name }}</a>
+      <div class="folder-meta">
+        {{ counts.by_id.get(folder.id, 0) }} document{{ '' if counts.by_id.get(folder.id, 0) == 1 else 's' }}
+        {% if folder.children %} · {{ folder.children|length }} subfolder{{ '' if folder.children|length == 1 else 's' }}{% endif %}
+      </div>
+    </div>
+    <details class="menu">
+      <summary class="icon-btn" aria-label="Folder actions">{{ icon('more') }}</summary>
+      <div class="dropdown">
+        <a class="dropdown-item" href="{{ url_for('documents.list_documents', folder_id=folder.id) }}">{{ icon('folder') }} Open</a>
+        <button class="dropdown-item" type="button" data-modal-open="folderModal" data-folder-edit="{{ folder.id }}"
+                data-folder-name="{{ folder.name }}">{{ icon('edit') }} Rename</button>
+        <button class="dropdown-item" type="button" data-modal-open="folderModal" data-folder-parent="{{ folder.id }}">{{ icon('folder-plus') }} Add subfolder</button>
+        <form method="POST" action="{{ url_for('folders.delete', folder_id=folder.id) }}" data-ajax data-after="reload"
+              data-confirm="Delete “{{ folder.name }}”? Documents inside move to {{ folder.parent_name or 'All documents' }} and are not deleted.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="dropdown-item danger" type="submit">{{ icon('trash') }} Delete folder</button>
+        </form>
+      </div>
+    </details>
+  </div>
+  {% if folder.children %}
+  <div class="folder-children">
+    {% for child in folder.children %}{{ folder_node(child, counts, depth + 1) }}{% endfor %}
+  </div>
+  {% endif %}
+</article>
+{%- endmacro %}

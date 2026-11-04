@@ -1,0 +1,61 @@
+{% from "partials/macros.html" import icon with context %}
+<dialog class="modal" id="uploadModal" aria-labelledby="uploadTitle">
+  <div class="modal-card">
+    <form id="uploadForm" method="POST" action="{{ url_for('documents.upload') }}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-head">
+        <span class="icon-wrap">{{ icon('upload') }}</span>
+        <div>
+          <h2 id="uploadTitle">Upload documents</h2>
+          <p class="small muted">PDF, Word, Excel, PowerPoint, text, images and ZIP — up to {{ max_upload_mb }} MB each.</p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="dropzone" id="uploadZone" tabindex="0" role="button"
+             aria-label="Choose files to upload">
+          {{ icon('upload') }}
+          <strong>Drop files here or click to browse</strong>
+          <span>You can upload several files at once</span>
+        </div>
+        <input id="uploadInput" type="file" name="files" multiple class="sr-only"
+               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.json,.csv,.jpg,.jpeg,.png,.webp,.gif,.zip">
+
+        <div class="upload-queue" id="uploadQueue"></div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="uploadFolder">Folder</label>
+            <select class="select" id="uploadFolder" name="folder_id">
+              <option value="">No folder</option>
+              {% for folder in folders_for_modals|default([]) %}
+                <option value="{{ folder.id }}">{{ folder.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="uploadTags">Tags</label>
+            <input class="input" id="uploadTags" name="tags" placeholder="receipt, 2026" autocomplete="off"
+                   {% if not caps.tags %}disabled title="Tags need the database upgrade"{% endif %}>
+          </div>
+        </div>
+        <div class="field">
+          <label for="uploadDescription">Description <span class="muted small">(optional)</span></label>
+          <input class="input" id="uploadDescription" name="description" maxlength="300" autocomplete="off"
+                 placeholder="What is this document?"
+                 {% if not caps.trash %}{% endif %}>
+        </div>
+
+        <div id="uploadProgress" hidden>
+          <div class="row-between small muted"><span id="uploadProgressText">Preparing…</span></div>
+          <div class="progress" style="margin-top:6px"><span id="uploadProgressBar" style="width:0"></span></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="uploadSubmit" disabled>
+          {{ icon('upload', 'icon-sm') }} Upload
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

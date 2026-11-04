@@ -1,0 +1,231 @@
+{% extends "layouts/app.html" %}
+{% from "partials/macros.html" import icon with context %}
+
+{% block title %}Settings — Doxari{% endblock %}
+
+{% block page %}
+<header class="page-head">
+  <div>
+    <h1>Settings</h1>
+    <p class="page-sub">Your profile, appearance, security and storage in one place.</p>
+  </div>
+</header>
+
+<div class="settings-grid">
+  <div class="settings-col">
+    <section class="card card-pad" id="profile">
+      <div class="section-title"><h2>Profile</h2></div>
+      <div class="profile-row">
+        <span class="avatar avatar-lg">{{ user_initials }}</span>
+        <div>
+          <strong>{{ current_user.full_name or user_display_name }}</strong>
+          <div class="muted small">{{ current_user.email }}</div>
+          <div class="muted small">Doxari accounts use your email for sign-in. Your initials stand in as your avatar.</div>
+        </div>
+      </div>
+      <form method="POST" action="{{ url_for('settings.profile') }}" data-ajax data-after="reload" class="stack" style="margin-top:16px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="label" for="fullName">Display name</label>
+        <div class="inline">
+          <input class="input" id="fullName" name="full_name" value="{{ current_user.full_name or '' }}" maxlength="80" placeholder="Your name">
+          <button class="btn btn-sm btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+      <div class="field" style="margin-top:14px">
+        <label for="emailReadonly">Email address</label>
+        <input class="input" id="emailReadonly" value="{{ current_user.email }}" readonly disabled>
+        <span class="hint">Changing your email is handled by the authentication provider, so it stays read-only here.</span>
+      </div>
+    </section>
+
+    <section class="card card-pad" id="appearance">
+      <div class="section-title"><h2>Appearance</h2></div>
+      <form method="POST" action="{{ url_for('settings.preferences') }}" data-ajax data-after="reload" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="label">Theme</label>
+        <div class="option-row">
+          {% for value, label, icon_name in [('light', 'Light', 'sun'), ('dark', 'Dark', 'moon'), ('system', 'Match device', 'settings')] %}
+          <label class="option">
+            <input type="radio" name="theme" value="{{ value }}" {% if prefs.theme == value %}checked{% endif %}>
+            <span class="option-body">{{ icon(icon_name, 'icon-sm') }} {{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+
+        <label class="label">Default layout</label>
+        <div class="option-row">
+          <label class="option">
+            <input type="radio" name="view_mode" value="grid" {% if prefs.view_mode != 'list' %}checked{% endif %}>
+            <span class="option-body">{{ icon('grid', 'icon-sm') }} Grid</span>
+          </label>
+          <label class="option">
+            <input type="radio" name="view_mode" value="list" {% if prefs.view_mode == 'list' %}checked{% endif %}>
+            <span class="option-body">{{ icon('list', 'icon-sm') }} List</span>
+          </label>
+        </div>
+
+        <label class="label">Notifications</label>
+        <label class="toggle">
+          <input type="checkbox" name="notifications" {% if prefs.notifications %}checked{% endif %}>
+          <span>Show upload, sharing and storage alerts in the notification panel</span>
+        </label>
+
+        <button class="btn btn-primary btn-sm" type="submit">Save preferences</button>
+        {% if not schema.preferences %}
+        <p class="hint">Theme is stored in this browser until the database upgrade runs. After that, your choice follows your account.</p>
+        {% endif %}
+      </form>
+    </section>
+
+    <section class="card card-pad" id="security">
+      <div class="section-title"><h2>Security</h2></div>
+      <form method="POST" action="{{ url_for('settings.password') }}" data-ajax data-after="none" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="label" for="currentPassword">Current password</label>
+        <input class="input" id="currentPassword" name="current_password" type="password" required autocomplete="current-password">
+        <label class="label" for="newPassword">New password</label>
+        <input class="input" id="newPassword" name="new_password" type="password" required minlength="8" autocomplete="new-password">
+        <label class="label" for="confirmPassword">Confirm new password</label>
+        <input class="input" id="confirmPassword" name="confirm_password" type="password" required minlength="8" autocomplete="new-password">
+        <button class="btn btn-sm btn-primary" type="submit">Update password</button>
+      </form>
+
+      <hr class="rule">
+
+      <div class="row-between">
+        <div>
+          <strong>Sign out</strong>
+          <div class="muted small">Ends this session on this device.</div>
+        </div>
+        <a class="btn btn-sm" href="{{ url_for('auth.logout') }}">{{ icon('logout', 'icon-sm') }} Sign out</a>
+      </div>
+    </section>
+
+    <section class="card card-pad" id="danger">
+      <div class="section-title"><h2>Delete account</h2></div>
+      <p class="muted small" style="margin-bottom:12px">
+        This permanently removes every document you own from private storage, then closes your
+        Doxari account. Shared links stop working immediately. This cannot be undone.
+      </p>
+      <details class="disclosure">
+        <summary class="btn btn-sm btn-danger">{{ icon('alert', 'icon-sm') }} Delete my account</summary>
+        <form method="POST" action="{{ url_for('settings.delete_account') }}" class="stack" style="margin-top:14px"
+              data-confirm="Delete your account and every document you own? This cannot be undone."
+              data-confirm-title="Delete account" data-confirm-label="Delete everything">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="label" for="confirmEmail">Type {{ current_user.email }} to confirm</label>
+          <input class="input" id="confirmEmail" name="confirm_email" autocomplete="off" required>
+          <label class="label" for="deletePassword">Your password</label>
+          <input class="input" id="deletePassword" name="password" type="password" required autocomplete="current-password">
+          <button class="btn btn-sm btn-danger" type="submit">Permanently delete everything</button>
+        </form>
+      </details>
+    </section>
+  </div>
+
+  <div class="settings-col">
+    <section class="card card-pad" id="storage">
+      <div class="section-title"><h2>Storage</h2></div>
+      <div class="storage-hero">
+        <div class="stat-value">{{ storage.used_display }}</div>
+        {% if usage.limit %}
+          <div class="progress"><span style="width: {{ usage.percent }}%"></span></div>
+          <div class="muted small">{{ usage.percent }}% of {{ usage.limit_display }} · {{ usage.remaining_display }} available</div>
+        {% else %}
+          <div class="muted small">No storage limit configured for this deployment.</div>
+        {% endif %}
+      </div>
+      <dl class="details">
+        <div><dt>Documents</dt><dd>{{ counts.documents }}</dd></div>
+        <div><dt>Folders</dt><dd>{{ counts.folders }}</dd></div>
+        <div><dt>In trash</dt><dd>{{ counts.trash }}</dd></div>
+        <div><dt>Stored objects</dt><dd>{{ storage.files }}</dd></div>
+        <div><dt>Bucket</dt><dd><code>{{ bucket }}</code></dd></div>
+        <div><dt>Max file size</dt><dd>{{ max_upload_mb }} MB</dd></div>
+      </dl>
+      <a class="btn btn-sm" href="{{ url_for('insights.analytics') }}" style="margin-top:12px">{{ icon('chart', 'icon-sm') }} Open analytics</a>
+    </section>
+
+    <section class="card card-pad" id="ai">
+      <div class="section-title">
+        <h2>{{ icon('sparkles', 'icon-sm') }} AI assistant</h2>
+        <span class="badge {{ 'badge-mint' if ai.configured else 'badge-amber' }}">{{ ai.label if ai.configured else 'Not configured' }}</span>
+      </div>
+      {% if ai.configured %}
+        <p class="muted small">
+          {{ ai.label }} is connected. Document summaries and questions only work on files you
+          choose, and only after you allow it below.
+        </p>
+      {% else %}
+        <p class="muted small">
+          Doxari ships with the AI integration built but switched off. To enable summaries,
+          key points and document questions, set these environment variables on your host and
+          redeploy:
+        </p>
+        <pre class="code-block">AI_PROVIDER=openai   # or groq, openrouter, or any OpenAI-compatible base URL
+AI_API_KEY=sk-...    # your provider key, never in frontend code
+AI_MODEL=gpt-4o-mini # optional</pre>
+        <p class="hint">Keys stay on the server. Nothing is sent to a provider until you configure one and allow it here.</p>
+      {% endif %}
+      <form method="POST" action="{{ url_for('settings.preferences') }}" data-ajax data-after="reload" class="stack" style="margin-top:12px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="theme" value="{{ prefs.theme or 'light' }}">
+        <input type="hidden" name="view_mode" value="{{ prefs.view_mode or 'grid' }}">
+        {% if prefs.notifications %}<input type="hidden" name="notifications" value="on">{% endif %}
+        <label class="toggle">
+          <input type="checkbox" name="ai_consent" {% if prefs.ai_consent %}checked{% endif %} {% if not ai.configured %}disabled{% endif %}>
+          <span>Allow selected documents to be sent to {{ ai.label if ai.configured else 'an AI provider' }} for summaries and questions</span>
+        </label>
+        <button class="btn btn-sm" type="submit" {% if not ai.configured %}disabled{% endif %}>Save AI consent</button>
+      </form>
+    </section>
+
+    <section class="card card-pad" id="database">
+      <div class="section-title">
+        <h2>Database upgrade</h2>
+        {% if not missing %}<span class="badge badge-mint">Up to date</span>{% else %}<span class="badge badge-amber">{{ missing|length }} pending</span>{% endif %}
+      </div>
+
+      {% if missing %}
+      <p class="muted small">
+        Folders, recoverable trash, sharing, activity history and saved preferences each need one
+        small SQL migration. Everything else already works, and no existing data is touched.
+      </p>
+      <ol class="steps">
+        <li>Open your Supabase project → <strong>SQL Editor</strong> → <strong>New query</strong>.</li>
+        <li>Paste the migration from the download link below.</li>
+        <li>Run it once, then reload Doxari. This page updates automatically.</li>
+      </ol>
+      <a class="btn btn-sm btn-primary" href="{{ url_for('settings.migration') }}">{{ icon('download', 'icon-sm') }} Download migration SQL</a>
+      {% else %}
+      <p class="muted small">Every Doxari feature is installed: folders, trash, sharing links, activity history and account preferences.</p>
+      {% endif %}
+
+      <table class="table" style="margin-top:16px">
+        <thead><tr><th>Feature</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for label, ready in [
+            ('Nested folders', schema.folders),
+            ('Recoverable trash', schema.trash),
+            ('Document sharing', schema.sharing),
+            ('Public share links', schema.share_links),
+            ('Activity history', schema.activity),
+            ('Saved preferences', schema.preferences),
+            ('Tags', schema.tags),
+            ('Full-text search', schema.full_text)
+          ] %}
+          <tr>
+            <td>{{ label }}</td>
+            <td>
+              {% if ready %}<span class="badge badge-mint">{{ icon('check', 'icon-sm') }} Ready</span>
+              {% else %}<span class="badge badge-amber">Needs migration</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <a class="link small" href="{{ url_for('settings.migration') }}">Download migration SQL</a>
+    </section>
+  </div>
+</div>
+{% endblock %}

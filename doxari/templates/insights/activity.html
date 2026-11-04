@@ -1,0 +1,59 @@
+{% extends "layouts/app.html" %}
+{% from "partials/macros.html" import icon, empty_state with context %}
+
+{% block title %}Activity — Doxari{% endblock %}
+
+{% block page %}
+<header class="page-head">
+  <div>
+    <h1>Activity history</h1>
+    <p class="page-sub">Every upload, download, move, share and deletion Doxari recorded, newest first.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-sm" href="{{ url_for('insights.analytics') }}">{{ icon('chart', 'icon-sm') }} Analytics</a>
+  </div>
+</header>
+
+{% if not supported %}
+<div class="setup-note">
+  {{ icon('info') }}
+  <div>
+    <strong>Activity history needs the database upgrade.</strong>
+    Doxari only lists events it actually recorded, so this page stays empty until the
+    activity table exists. Run the migration in
+    <a href="{{ url_for('settings.index') }}#database">Settings → Database</a> and new activity
+    appears here right away.
+  </div>
+</div>
+{% elif groups %}
+<div class="timeline">
+  {% for group in groups %}
+  <section class="timeline-day">
+    <h2>{{ group.label }}</h2>
+    <ul>
+      {% for item in group["items"] %}
+      <li>
+        <span class="activity-icon">{{ icon(item.icon) }}</span>
+        <div class="grow">
+          <div class="activity-title">
+            {{ item.verb }}
+            {% if item.document_id and item.document_name %}
+              <a href="{{ url_for('documents.preview', document_id=item.document_id) }}">{{ item.document_name }}</a>
+            {% elif item.document_name %}
+              <strong>{{ item.document_name }}</strong>
+            {% endif %}
+          </div>
+          <div class="activity-meta">{{ item.when }}</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+{{ empty_state('clock', 'No activity yet',
+   'Once you upload or open a document, Doxari records it here so you always know what changed.',
+   '<button class="btn btn-primary" type="button" data-modal-open="uploadModal">Upload a document</button>') }}
+{% endif %}
+{% endblock %}

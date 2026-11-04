@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import icon with context %}
+{% block title %}Doxari — Your documents, organized and secure{% endblock %}
+{% block robots %}index, follow{% endblock %}
+
+{% block body %}
+<div class="public-shell">
+  {% include "partials/public_nav.html" %}
+
+  <section class="hero">
+    <div>
+      <span class="hero-badge">{{ icon('shield', 'icon-sm') }} Private by default · Signed, expiring links</span>
+      <h1>Your documents,<br><em>organized and secure.</em></h1>
+      <p class="lead">
+        Doxari is a calm, beautiful home for your files. Upload once, find anything in
+        seconds, preview it in the browser, and share it only with the people you choose.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="{{ url_for('auth.register') }}">
+          {{ icon('arrow-right', 'icon-sm') }} Create your free account
+        </a>
+        <a class="btn btn-lg" href="{{ url_for('auth.login') }}">I already have one</a>
+      </div>
+      <p class="hero-note">
+        No card required. Your files stay private to your account.
+      </p>
+    </div>
+
+    <div class="hero-panel" aria-hidden="true">
+      <div class="hero-panel-top">
+        <span>Your library</span>
+        <span class="badge badge-green">{{ icon('lock', 'icon-sm') }} Private</span>
+      </div>
+      <div class="hero-stat-row">
+        <div class="hero-stat"><div class="n">128</div><div class="l">Documents</div></div>
+        <div class="hero-stat"><div class="n">14</div><div class="l">Folders</div></div>
+        <div class="hero-stat"><div class="n">2.4 GB</div><div class="l">Stored</div></div>
+      </div>
+      <div class="hero-file">
+        <span class="row-type">{{ icon('file-text') }}</span>
+        <div class="grow"><div class="strong small">Employment contract.pdf</div><div class="doc-meta">PDF · 482 KB</div></div>
+        <span class="badge badge-green">Work</span>
+      </div>
+      <div class="hero-file">
+        <span class="row-type">{{ icon('image') }}</span>
+        <div class="grow"><div class="strong small">Passport scan.png</div><div class="doc-meta">Image · 1.1 MB</div></div>
+        <span class="badge badge-green">Personal</span>
+      </div>
+      <div class="hero-file">
+        <span class="row-type">{{ icon('chart') }}</span>
+        <div class="grow"><div class="strong small">Q3 budget.xlsx</div><div class="doc-meta">Spreadsheet · 96 KB</div></div>
+        <span class="badge badge-green">Work</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="section-title" style="margin-bottom:18px">
+      <h2 style="font-size:1.35rem">Everything you need to stay organized</h2>
+    </div>
+    <div class="feature-grid">
+      <article class="feature">
+        <span class="icon-wrap">{{ icon('upload') }}</span>
+        <h3>Upload anything that matters</h3>
+        <p>PDFs, Word, Excel, PowerPoint, text, images and ZIP archives, with progress you can actually see.</p>
+      </article>
+      <article class="feature">
+        <span class="icon-wrap">{{ icon('folder') }}</span>
+        <h3>Folders that match your life</h3>
+        <p>School, Work, Certificates and more by default, plus your own folders with subfolders.</p>
+      </article>
+      <article class="feature">
+        <span class="icon-wrap">{{ icon('search') }}</span>
+        <h3>Search that finds the file</h3>
+        <p>Search names, folders and document text, then filter by type, date or favorite.</p>
+      </article>
+      <article class="feature">
+        <span class="icon-wrap">{{ icon('eye') }}</span>
+        <h3>Preview without downloading</h3>
+        <p>Open PDFs, images and text files right in the browser, then download only when you need to.</p>
+      </article>
+      <article class="feature">
+        <span class="icon-wrap">{{ icon('share') }}</span>
+        <h3>Sharing you control</h3>
+        <p>Share with another Doxari account, or send a link that expires. Revoke access any time.</p>
+      </article>
+      <article class="feature" id="security">
+        <span class="icon-wrap">{{ icon('shield') }}</span>
+        <h3>Private by design</h3>
+        <p>Every file is served through short-lived signed links and checked against your account before it moves.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer class="public-footer">
+    <div>&copy; 2026 Doxari. A calmer place for your documents.</div>
+    <div class="links">
+      <a href="{{ url_for('auth.login') }}">Sign in</a>
+      <a href="{{ url_for('auth.register') }}">Create account</a>
+      <a href="{{ url_for('main.healthz') }}">Service status</a>
+    </div>
+  </footer>
+</div>
+{% endblock %}

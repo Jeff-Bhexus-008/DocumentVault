@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import icon with context %}
+
+{% block body %}
+<div class="shell">
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" href="{{ url_for('documents.dashboard') }}">
+      <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="">
+      <span class="brand-text">
+        <span class="brand-name">Doxari</span>
+        <span class="brand-tag">Document vault</span>
+      </span>
+    </a>
+
+    <nav class="nav-group">
+      <a class="nav-item {% if active_endpoint == 'documents.dashboard' %}active{% endif %}" href="{{ url_for('documents.dashboard') }}">
+        {{ icon('home') }} Dashboard
+      </a>
+      <a class="nav-item {% if active_endpoint in ['documents.list_documents', 'documents.preview'] and not request.args.get('folder') and not request.args.get('folder_id') %}active{% endif %}" href="{{ url_for('documents.list_documents') }}">
+        {{ icon('file') }} All documents
+        <span class="nav-count">{{ nav_counts.documents }}</span>
+      </a>
+      <a class="nav-item {% if active_endpoint == 'folders.index' %}active{% endif %}" href="{{ url_for('folders.index') }}">
+        {{ icon('folder') }} My folders
+        {% if caps.folders and nav_counts.folders %}<span class="nav-count">{{ nav_counts.folders }}</span>{% endif %}
+      </a>
+      <a class="nav-item {% if active_endpoint == 'documents.favorites' %}active{% endif %}" href="{{ url_for('documents.favorites') }}">
+        {{ icon('star') }} Favorites
+        {% if nav_counts.favorites %}<span class="nav-count">{{ nav_counts.favorites }}</span>{% endif %}
+      </a>
+      <a class="nav-item {% if active_endpoint == 'documents.recent' %}active{% endif %}" href="{{ url_for('documents.recent') }}">
+        {{ icon('clock') }} Recent
+      </a>
+      <a class="nav-item {% if active_endpoint == 'sharing.shared' %}active{% endif %}" href="{{ url_for('sharing.shared') }}">
+        {{ icon('share') }} Shared with me
+        {% if nav_counts.shared_with_me %}<span class="nav-count">{{ nav_counts.shared_with_me }}</span>{% endif %}
+      </a>
+    </nav>
+
+    <div class="nav-group">
+      <span class="nav-label">Categories</span>
+      {% for category in categories %}
+      <a class="nav-item {% if request.args.get('folder') == category.name %}active{% endif %}"
+         href="{{ url_for('documents.list_documents', folder=category.name) }}">
+        {{ icon(category.icon) }} {{ category.name }}
+      </a>
+      {% endfor %}
+      <a class="nav-item {% if request.args.get('folder') == fallback_category and not request.args.get('folder_id') %}active{% endif %}"
+         href="{{ url_for('documents.list_documents', folder=fallback_category) }}">
+        {{ icon('file') }} {{ fallback_category }}
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <span class="nav-label">Insights</span>
+      <a class="nav-item {% if active_endpoint == 'insights.analytics' %}active{% endif %}" href="{{ url_for('insights.analytics') }}">
+        {{ icon('chart') }} Analytics
+      </a>
+      <a class="nav-item {% if active_endpoint == 'insights.activity' %}active{% endif %}" href="{{ url_for('insights.activity') }}">
+        {{ icon('bell') }} Activity
+      </a>
+      <a class="nav-item {% if active_endpoint == 'documents.trash' %}active{% endif %}" href="{{ url_for('documents.trash') }}">
+        {{ icon('trash') }} Trash
+        {% if nav_counts.trash %}<span class="nav-count">{{ nav_counts.trash }}</span>{% endif %}
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      {% if sidebar_usage %}
+      <div class="storage-mini">
+        <div class="storage-mini-top">
+          <span>Storage</span>
+          <span>{{ sidebar_usage.used_display }}</span>
+        </div>
+        {% if sidebar_usage.percent is not none %}
+          <div class="progress"><span style="width: {{ sidebar_usage.percent }}%"></span></div>
+          <div class="small muted" style="margin-top:6px">{{ sidebar_usage.percent }}% of your plan used</div>
+        {% else %}
+          <div class="progress"><span style="width: 100%; opacity:.3"></span></div>
+          <div class="small muted" style="margin-top:6px">{{ sidebar_usage.files }} files stored privately</div>
+        {% endif %}
+      </div>
+      {% endif %}
+      <a class="nav-item" href="{{ url_for('settings.index') }}">{{ icon('settings') }} Settings</a>
+      <a class="nav-item" href="{{ url_for('auth.logout') }}">{{ icon('logout') }} Sign out</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-toggle" type="button" data-nav-toggle aria-label="Open navigation">
+        {{ icon('menu') }}
+      </button>
+
+      <form class="global-search" role="search" action="{{ url_for('insights.search') }}" method="GET">
+        {{ icon('search', 'icon-search') }}
+        <label class="sr-only" for="globalSearch">Search your documents</label>
+        <input id="globalSearch" name="q" type="search" autocomplete="off" placeholder="Search documents, folders…"
+               value="{{ request.args.get('q', '') if active_endpoint == 'insights.search' else '' }}">
+        <kbd>/</kbd>
+        <div class="suggestions" id="globalSuggestions" role="listbox" aria-label="Search suggestions"></div>
+      </form>
+
+      <div class="topbar-actions">
+        <button class="icon-btn optional" type="button" data-theme-toggle aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg class="icon" aria-hidden="true"><use data-theme-icon href="/static/img/icons.svg#i-{{ 'sun' if theme == 'dark' else 'moon' }}"></use></svg>
+        </button>
+        <div class="user-menu">
+          <button class="icon-btn optional" type="button" aria-label="Notifications"
+                  data-dropdown-toggle="notificationPanel" aria-expanded="false">
+            {{ icon('bell') }}<span class="dot"></span>
+          </button>
+          <div class="dropdown" id="notificationPanel" hidden style="min-width:320px" data-notification-panel></div>
+        </div>
+        <div class="user-menu">
+          <button class="icon-btn" type="button" data-dropdown-toggle="userPanel" aria-label="Account menu" aria-expanded="false" style="width:auto;padding:0 4px">
+            <span class="avatar">{{ user_initials }}</span>
+          </button>
+          <div class="dropdown" id="userPanel" hidden>
+            <div class="dropdown-head">
+              <div class="name">{{ current_user.full_name or user_display_name }}</div>
+              <div class="email">{{ current_user.email }}</div>
+            </div>
+            <a class="dropdown-item" href="{{ url_for('settings.index') }}">{{ icon('settings') }} Settings</a>
+            <a class="dropdown-item" href="{{ url_for('insights.activity') }}">{{ icon('bell') }} Activity history</a>
+            <a class="dropdown-item" href="{{ url_for('insights.analytics') }}">{{ icon('chart') }} Storage analytics</a>
+            <button class="dropdown-item" type="button" data-theme-toggle>{{ icon('moon') }} Switch theme</button>
+            <a class="dropdown-item danger" href="{{ url_for('auth.logout') }}">{{ icon('logout') }} Sign out</a>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" type="button" data-modal-open="uploadModal" style="margin-left:4px">
+          {{ icon('upload', 'icon-sm') }} Upload
+        </button>
+      </div>
+    </header>
+
+    <main class="page" id="main">
+      {% block page %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<nav class="mobile-nav" aria-label="Quick navigation">
+  <div class="mobile-nav-inner">
+    <a href="{{ url_for('documents.dashboard') }}" class="{% if active_endpoint == 'documents.dashboard' %}is-active{% endif %}">
+      {{ icon('home') }} Home
+    </a>
+    <a href="{{ url_for('documents.list_documents') }}" class="{% if active_endpoint == 'documents.list_documents' %}is-active{% endif %}">
+      {{ icon('file') }} Files
+    </a>
+    <button class="mobile-fab" type="button" data-modal-open="uploadModal" aria-label="Upload documents">
+      {{ icon('plus') }}
+    </button>
+    <a href="{{ url_for('insights.search') }}" class="{% if active_endpoint == 'insights.search' %}is-active{% endif %}">
+      {{ icon('search') }} Search
+    </a>
+    <a href="{{ url_for('folders.index') }}" class="{% if active_endpoint == 'folders.index' %}is-active{% endif %}">
+      {{ icon('folder') }} Folders
+    </a>
+  </div>
+</nav>
+
+{% include "partials/upload_modal.html" %}
+
+<dialog class="modal" id="moveModal" aria-labelledby="moveTitle">
+  <div class="modal-card">
+    <form method="POST" action="" data-ajax data-after="reload" data-close="1">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-head">
+        <span class="icon-wrap">{{ icon('move') }}</span>
+        <div>
+          <h2 id="moveTitle">Move document</h2>
+          <p class="small muted" data-target-label></p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="moveFolder">Destination folder</label>
+          <select class="select" id="moveFolder" name="folder_id">
+            <option value="">No folder ({{ fallback_category }})</option>
+            {% for folder in folders_for_modals|default([]) %}
+              <option value="{{ folder.id }}">{{ folder.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Move</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog class="modal" id="shareModal" aria-labelledby="shareTitle">
+  <div class="modal-card">
+    <form method="POST" action="" data-ajax data-after="none">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-head">
+        <span class="icon-wrap">{{ icon('share') }}</span>
+        <div>
+          <h2 id="shareTitle">Share document</h2>
+          <p class="small muted" data-target-label></p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="shareEmailModal">Recipient's Doxari email</label>
+          <input class="input" id="shareEmailModal" name="email" type="email" required autocomplete="off"
+                 placeholder="teammate@example.com">
+          <span class="hint">They need a Doxari account. Sharing grants access to this one document only.</span>
+        </div>
+        <div class="field">
+          <label for="sharePermission">Permission</label>
+          <select class="select" id="sharePermission" name="permission">
+            <option value="view">View only</option>
+            <option value="download">Can download</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Share document</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog class="modal" id="folderModal" aria-labelledby="folderTitle">
+  <div class="modal-card">
+    <form method="POST" action="{{ url_for('folders.create') }}" data-ajax data-after="reload" data-close="1">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-head">
+        <span class="icon-wrap">{{ icon('folder-plus') }}</span>
+        <div>
+          <h2 id="folderTitle">New folder</h2>
+          <p class="small muted">Group documents by project, topic or anything you like.</p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="folderName">Folder name</label>
+          <input class="input" id="folderName" name="name" maxlength="60" required placeholder="e.g. Tax 2026" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="folderParent">Inside</label>
+          <select class="select" id="folderParent" name="parent_id">
+            <option value="">Top level</option>
+            {% for folder in folders_for_modals|default([]) %}
+              <option value="{{ folder.id }}">{{ folder.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Create folder</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+{% endblock %}

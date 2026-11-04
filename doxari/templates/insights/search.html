@@ -1,0 +1,112 @@
+{% extends "layouts/app.html" %}
+{% from "partials/macros.html" import icon, doc_card, empty_state with context %}
+
+{% block title %}{% if query %}{{ query }} — search{% else %}Search{% endif %} — Doxari{% endblock %}
+
+{% block page %}
+<section class="search-hero">
+  <h1>Search your library</h1>
+  <form class="search-big" method="GET" action="{{ url_for('insights.search') }}" role="search">
+    {{ icon('search') }}
+    <input type="search" name="q" value="{{ query }}" placeholder="Try “work documents from last month” or “certificates”"
+           aria-label="Search documents" autofocus autocomplete="off">
+    {% if group %}<input type="hidden" name="type" value="{{ group }}">{% endif %}
+    {% if folder_id %}<input type="hidden" name="folder_id" value="{{ folder_id }}">{% endif %}
+    {% if keyword_mode %}<input type="hidden" name="mode" value="keyword">{% endif %}
+    <button class="btn btn-primary" type="submit">Search</button>
+  </form>
+
+  {% if plan and plan.triggered and not keyword_mode %}
+  <div class="plan-note">
+    {{ icon('sparkles', 'icon-sm') }}
+    <span>Read as: {% for bit in plan.explanation %}<span class="badge badge-mint">{{ bit }}</span>{% endfor %}
+      {% if plan.search %}<span class="badge badge-mint">matching “{{ plan.search }}”</span>{% endif %}
+      {% if plan.folder %}<span class="badge badge-mint">folder {{ plan.folder }}</span>{% endif %}
+    </span>
+    <a class="link small" href="{{ query_url(mode='keyword') }}">Search these words literally</a>
+  </div>
+  {% endif %}
+</section>
+
+<form class="toolbar" method="GET" action="{{ url_for('insights.search') }}">
+  <input type="hidden" name="q" value="{{ query }}">
+  {% if keyword_mode %}<input type="hidden" name="mode" value="keyword">{% endif %}
+
+  <select class="select" name="type" data-autosubmit aria-label="File type" style="width:auto">
+    <option value="">Any type</option>
+    {% for key, label in file_groups.items() %}
+      <option value="{{ key }}" {% if group == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  {% if caps.folders %}
+  <select class="select" name="folder_id" data-autosubmit aria-label="Folder" style="width:auto">
+    <option value="">Any folder</option>
+    {% for folder in folders %}
+      <option value="{{ folder.id }}" {% if folder_id == folder.id %}selected{% endif %}>{{ folder.path or folder.name }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+
+  <input class="input" type="date" name="from" value="{{ date_from[:10] if date_from else '' }}" data-autosubmit
+         aria-label="Uploaded since" style="width:auto">
+
+  <select class="select" name="sort" data-autosubmit aria-label="Sort" style="width:auto">
+    {% for key, label in sorts.items() %}
+      <option value="{{ key }}" {% if sort == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <a class="btn btn-sm btn-ghost" href="{{ url_for('insights.search') }}">Reset</a>
+</form>
+
+{% if matched_folders %}
+<section class="card card-pad" style="margin-bottom:18px">
+  <div class="section-title"><h2>Folders</h2></div>
+  <div class="chip-grid">
+    {% for folder in matched_folders %}
+    <a class="chips" href="{{ url_for('documents.list_documents', folder_id=folder.id) }}">
+      {{ icon('folder', 'icon-sm') }} {{ folder.name }}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if documents %}
+  <p class="muted small" style="margin-bottom:10px">
+    {{ total }} result{{ '' if total == 1 else 's' }}{% if total > documents|length %} · showing the first {{ documents|length }}{% endif %}
+    {% if full_text %} · text inside documents is searchable{% endif %}
+  </p>
+  <div class="doc-grid">
+    {% for document in documents %}{{ doc_card(document, show_select=False) }}{% endfor %}
+  </div>
+  {% if total > documents|length %}
+  <div class="center" style="margin-top:20px">
+    <a class="btn" href="{{ url_for('documents.list_documents', q=active_filters.search, type=active_filters.group, folder_id=active_filters.folder_id, sort=active_filters.sort, **{'from': active_filters.date_from}) }}">
+      Open in document browser
+    </a>
+  </div>
+  {% endif %}
+{% elif query or group or folder_id %}
+  {{ empty_state('search', 'No results for that search',
+     'Try fewer words, a different file type, or check whether the document is in Trash.',
+     '<a class="btn" href="' ~ url_for('insights.search') ~ '">Start a new search</a>
+      <a class="btn" href="' ~ url_for('documents.list_documents') ~ '">Browse all documents</a>') }}
+{% else %}
+  <section class="card card-pad">
+    <div class="section-title"><h2>Suggested searches</h2></div>
+    <div class="chip-grid">
+      {% for suggestion in suggestions %}
+        <a class="chips" href="{{ suggestion.url }}">{{ icon('search', 'icon-sm') }} {{ suggestion.label }}</a>
+      {% endfor %}
+      <a class="chips" href="{{ url_for('documents.favorites') }}">{{ icon('star', 'icon-sm') }} Favorites</a>
+      <a class="chips" href="{{ url_for('documents.recent') }}">{{ icon('clock', 'icon-sm') }} Recently opened</a>
+    </div>
+    <p class="hint" style="margin-top:16px">
+      Smart search understands phrases like “work documents from last month”, “my largest PDFs”
+      or “favorite certificates”. It never leaves your account.
+    </p>
+  </section>
+{% endif %}
+{% endblock %}
