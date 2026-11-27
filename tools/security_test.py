@@ -76,6 +76,23 @@ check("view-only cannot download", r.status_code in (403, 404), str(r.status_cod
 r = B.post(BASE + f"/documents/{doc}/delete", headers={"X-CSRF-Token": tb, "X-Requested-With": "XMLHttpRequest"})
 check("viewer cannot delete owner's doc", r.status_code in (403, 404), str(r.status_code))
 
+# revoke, then share again: access must actually come back
+ta = csrf(A, "/documents")
+m = re.search(r'/shares/([0-9a-f-]+)/revoke', A.get(BASE + f"/documents/{doc}").text)
+if not m:
+    check("revoke control present", False, "no revoke form in preview")
+else:
+    r = A.post(BASE + f"/shares/{m.group(1)}/revoke",
+               headers={"X-CSRF-Token": ta, "X-Requested-With": "XMLHttpRequest"})
+    check("owner can revoke share", r.status_code == 200, r.text[:200])
+    check("revoked share hides document", B.get(BASE + f"/documents/{doc}").status_code in (403, 404))
+    r = A.post(BASE + f"/documents/{doc}/share",
+               data={"csrf_token": ta, "email": f"int{stamp}@example.com", "permission": "view"},
+               headers={"X-Requested-With": "XMLHttpRequest"})
+    check("re-share after revoke reported ok", r.status_code == 200 and r.json().get("ok") is True, r.text[:200])
+    check("re-share restores access", B.get(BASE + f"/documents/{doc}").status_code == 200)
+    check("re-share keeps view-only", B.get(BASE + f"/documents/{doc}/download").status_code in (403, 404))
+
 # file validation
 bad = A.post(BASE + "/upload", data={"csrf_token": ta},
              files=[("files", ("virus.exe", io.BytesIO(b"MZ"), "application/x-msdownload"))],

@@ -91,17 +91,28 @@ def share_document(document_id):
             status=404,
         )
 
+    # `revoked` must be fetched, otherwise the filter below can never see it and
+    # a dead share is mistaken for a live one.
     existing = repo.api.rest(
         "document_shares",
-        params={"select": "id", "document_id": f"eq.{document_id}",
-                "shared_with_id": f"eq.{recipient['id']}"},
-    )
-    existing = [row for row in existing if not row.get("revoked")]
-    if existing:
+        params={"select": "id, revoked", "document_id": f"eq.{document_id}",
+                "shared_with_id": f"eq.{recipient['id']}", "order": "created_at.desc"},
+    ) or []
+    live = [row for row in existing if not row.get("revoked")]
+    if live:
+        repo.api.rest(
+            "document_shares", "PATCH",
+            params={"id": f"eq.{live[0]['id']}", "owner_id": f"eq.{user['id']}"},
+            json={"permission": permission}, prefer="return=minimal",
+        )
+    elif existing:
+        # Sharing again with someone whose access was revoked has to bring that
+        # share back to life, or the owner is told it worked while the recipient
+        # still sees nothing.
         repo.api.rest(
             "document_shares", "PATCH",
             params={"id": f"eq.{existing[0]['id']}", "owner_id": f"eq.{user['id']}"},
-            json={"permission": permission}, prefer="return=minimal",
+            json={"permission": permission, "revoked": False}, prefer="return=minimal",
         )
     else:
         repo.share_document(user["id"], document, email, permission, recipient["id"])
